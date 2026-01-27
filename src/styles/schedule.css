@@ -1,0 +1,329 @@
+.gcl-schedule-page {
+  padding: 24px 32px 40px;
+  color: #e5e7eb;
+}
+
+.gcl-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.gcl-schedule-breadcrumb {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.gcl-schedule-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.gcl-schedule-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.gcl-schedule-card {
+  background: #020617;
+  border-radius: 20px;
+  padding: 18px 22px 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Tabs */
+
+.gcl-schedule-tabs {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.gcl-schedule-tab {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  padding: 7px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+}
+
+.gcl-schedule-tab-active {
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #fbbf24);
+  color: #0b1120;
+  font-weight: 600;
+}
+
+/* Filters */
+
+.gcl-schedule-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.gcl-form-control {
+  min-width: 220px;
+  max-width: 260px;
+}
+
+.gcl-form-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.gcl-form-input {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 7px 12px;
+  font-size: 13px;
+  background: radial-gradient(circle at top left, #020617, #020617);
+  color: #e5e7eb;
+  outline: none;
+}
+
+.gcl-form-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.7);
+}
+
+.gcl-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Buttons */
+
+.gcl-btn {
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 7px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gcl-btn-primary {
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #fbbf24);
+  color: #0b1120;
+  font-weight: 600;
+}
+
+.gcl-btn-ghost {
+  background: transparent;
+  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.gcl-btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+/* Results */
+
+.gcl-schedule-results {
+  margin-top: 4px;
+}
+
+.gcl-schedule-loading,
+.gcl-schedule-error,
+.gcl-schedule-empty {
+  font-size: 13px;
+  padding: 10px 4px;
+  color: #cbd5f5;
+}
+
+.gcl-schedule-error {
+  color: #fecaca;
+}
+
+/* Table */
+
+.gcl-schedule-table-wrapper {
+  border-radius: 20;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 18px;
+}
+
+.gcl-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.gcl-schedule-table th,
+.gcl-schedule-table td {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  white-space: nowrap;
+  color: #111827;
+}
+
+.gcl-schedule-table th {
+  font-weight: 600;
+}
+
+.gcl-schedule-table tbody tr:nth-child(even) {
+  background: #a8bbcf;
+}
+
+.gcl-schedule-table tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.gcl-schedule-table tbody tr:hover {
+  background: #e5e7eb;
+}
+/* ====== OVERRIDE UNTUK FULL WIDTH ====== */
+
+/* Pastikan area konten nggak di-limit max-width */
+.gcl-main {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Halaman schedule full ke kanan-kiri (kecuali padding sedikit) */
+.gcl-schedule-page {
+  padding: 24px 16px 40px;  /* bisa dibesarkan kalau mau */
+}
+
+/* Card ikut full width, hilangkan margin sempit */
+.gcl-schedule-card {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+  box-sizing: border-box;
+}
+
+/* Wrapper tabel lane: full width juga */
+.gcl-schedule-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  border-radius: 30; /* biar mirip contoh gambar, kalau mau rounded hapus baris ini */
+}
+
+/* Tabel benar-benar 100% */
+.gcl-schedule-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed; /* kolom lebih rata, nggak melebar aneh */
+}
+
+/* Supaya text nggak bikin tabel melar terlalu jauh */
+.gcl-schedule-table th,
+.gcl-schedule-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Booking button column */
+.gcl-col-booking {
+  text-align: center;
+  width: 120px;
+}
+
+.gcl-col-booking-cell {
+  text-align: center;
+}
+
+/* Booking button – harus mencolok */
+/* Booking button – glossy blue capsule */
+.gcl-booking-btn {
+  position: relative;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 7px 20px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  background: linear-gradient(180deg, #38bdf8 0%, #0f6ddf 45%, #033968 100%);
+  color: #ffffff;
+
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.85),
+    0 7px 18px rgba(15, 23, 42, 0.95);
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.7);
+
+  overflow: hidden;
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out,
+    filter 0.12s ease-out;
+}
+
+/* highlight mengkilap di atas */
+.gcl-booking-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.15) 38%,
+      transparent 60%
+    );
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* glow refleksi di bawah */
+.gcl-booking-btn::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: -40%;
+  height: 60%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(56, 189, 248, 0.5),
+    transparent 70%
+  );
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.gcl-booking-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.9),
+    0 12px 26px rgba(15, 23, 42, 0.98);
+  filter: brightness(1.05);
+}
+
+.gcl-booking-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.9),
+    0 6px 14px rgba(15, 23, 42, 0.9);
+  filter: brightness(0.97);
+}

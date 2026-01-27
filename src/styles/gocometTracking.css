@@ -1,0 +1,304 @@
+.gocomet-wrap {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-size: 12px;
+  color: #222;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+
+/* FORM */
+.gocomet-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.gocomet-form-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  flex: 1;
+}
+
+.gocomet-label-main {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.gocomet-input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.gocomet-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+.gocomet-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #1d4ed8;
+  color: #fff;
+  font-weight: 600;
+  transition: transform 0.05s ease, box-shadow 0.05s ease,
+    background 0.1s ease;
+}
+
+.gocomet-btn:hover {
+  background: #1e40af;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+}
+
+.gocomet-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* HEADER */
+.gocomet-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gocomet-header-item {
+  min-width: 120px;
+}
+.gocomet-header-card {
+  background: #66b7ee;
+  border-radius: 8px;
+  padding: 15px 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.gocomet-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gocomet-header-item {
+  min-width: 140px;
+}
+
+.gocomet-header-note {
+  margin-top: 12px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-left: 4px solid #007bff;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+}
+
+.gocomet-header-note .note-title {
+  font-weight: 600;
+  margin-right: 6px;
+}
+.gocomet-header {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: #f4f8ff;
+  border: 1px solid #d5e0ff;
+}
+
+.gocomet-header-main,
+.gocomet-header-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 8px;
+}
+
+.gocomet-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.gocomet-value {
+  font-weight: 600;
+}
+
+.gocomet-status {
+  font-weight: 700;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid #b0d4b0;
+  background: #e7f7e7;
+}
+
+/* status variants */
+.gocomet-status.completed {
+  border-color: #4caf50;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.gocomet-status.transit {
+  border-color: #ffb300;
+  background: #fff8e1;
+  color: #ef6c00;
+}
+
+.gocomet-status.delayed {
+  border-color: #e53935;
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.gocomet-header-arrived {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #444;
+}
+
+/* BLOCK */
+.gocomet-block {
+  margin-bottom: 20px;
+}
+
+.gocomet-block-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  border-left: 3px solid #2563eb;
+  padding-left: 8px;
+}
+
+/* ROUTING */
+.gocomet-routing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gocomet-routing-card {
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 10px 12px;
+  min-width: 220px;
+  background: #fafafa;
+}
+
+.gocomet-routing-line {
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.gocomet-routing-label {
+  font-weight: 600;
+}
+
+/* STEPPER */
+.gocomet-stepper {
+  position: relative;
+  padding-left: 18px;
+  border-left: 2px solid #cbd5e0;
+}
+
+.gocomet-step-node {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.gocomet-step-dot {
+  position: absolute;
+  left: -10px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #2563eb;
+  background: #fff;
+}
+
+.gocomet-step-content {
+  margin-left: 8px;
+}
+
+.gocomet-step-title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.gocomet-step-meta {
+  font-size: 11px;
+  color: #555;
+  margin-top: 2px;
+}
+
+/* EVENT LIST */
+.gocomet-events-wrapper {
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.gocomet-events-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.gocomet-events-table thead {
+  background: #f3f4f6;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.gocomet-events-table th,
+.gocomet-events-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+}
+
+.gocomet-events-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+/* EMPTY & MESSAGE */
+.gocomet-empty {
+  font-size: 11px;
+  color: #666;
+}
+
+.gocomet-message {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #b91c1c;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* LOADING */
+.gocomet-wrap.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}

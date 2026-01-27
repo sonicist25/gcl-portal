@@ -1,0 +1,733 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+.gcl-auth-bg {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #0b5ed7 0, #021526 45%, #000814 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f9fafb;
+}
+
+.gcl-auth-overlay {
+  width: 100%;
+  max-width: 420px;
+  padding: 16px;
+}
+
+.gcl-auth-card {
+  background: linear-gradient(145deg, rgba(10, 25, 47, 0.98), rgba(15, 23, 42, 0.95));
+  border-radius: 18px;
+  padding: 28px 24px 24px;
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(252, 211, 77, 0.3);
+  backdrop-filter: blur(12px);
+}
+
+.gcl-auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.gcl-logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0ea5e9, #facc15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 22px;
+  color: #0f172a;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  box-shadow: 0 0 18px rgba(14,165,233,0.8);
+}
+
+.gcl-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.gcl-logo-main {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gcl-logo-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #e5e7eb;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.gcl-auth-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.gcl-auth-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 18px;
+}
+
+.gcl-auth-alert {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.gcl-auth-alert.error {
+  background: rgba(248, 113, 113, 0.16);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  color: #fecaca;
+}
+
+.gcl-auth-form {
+  margin-top: 8px;
+}
+
+.gcl-form-group {
+  margin-bottom: 14px;
+}
+
+.gcl-form-group label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: #e5e7eb;
+}
+
+.gcl-form-group input {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #f9fafb;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.gcl-form-group input::placeholder {
+  color: #6b7280;
+}
+
+.gcl-form-group input:focus {
+  border-color: #facc15;
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.6);
+}
+
+.gcl-auth-button {
+  width: 100%;
+  padding: 10px 14px;
+  margin-top: 4px;
+  border-radius: 999px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: linear-gradient(135deg, #facc15, #f97316);
+  color: #0f172a;
+  box-shadow:
+    0 12px 25px rgba(250, 204, 21, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.gcl-auth-footer {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ====== LAYOUT MAIN PORTAL ====== */
+.gcl-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #0b5ed7 0, #020617 45%, #000814 100%);
+  color: #e5e7eb;
+}
+
+/* ====== SIDEBAR ====== */
+.gcl-sidebar {
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #020617 0%, #020617 50%, #020617 100%);
+  padding: 14px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gcl-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.gcl-sidebar-logo-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0ea5e9, #facc15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #111827;
+  box-shadow: 0 0 14px rgba(14, 165, 233, 0.7);
+}
+
+.gcl-sidebar-logo-text span {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gcl-sidebar-logo-text small {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gcl-sidebar-nav {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.gcl-nav-section-label {
+  margin-top: 10px;
+  margin-bottom: 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #6b7280;
+}
+
+.gcl-nav-item {
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-size: 13px;
+  background: transparent;
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.06s ease;
+}
+
+.gcl-nav-item:hover {
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.gcl-nav-item.active {
+  background: linear-gradient(135deg, #facc15, #f97316);
+  color: #111827;
+  box-shadow: 0 10px 22px rgba(250, 204, 21, 0.45);
+}
+
+.gcl-nav-item.logout {
+  margin-top: 8px;
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.gcl-nav-item.logout:hover {
+  background: rgba(248, 113, 113, 0.25);
+}
+
+/* ====== MAIN AREA ====== */
+.gcl-main {
+  padding: 18px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Header / breadcrumb */
+.gcl-main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.gcl-breadcrumb {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #9ca3af;
+}
+
+.gcl-breadcrumb span:last-child {
+  color: #facc15;
+}
+
+.gcl-page-title {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.gcl-page-subtitle {
+  margin-top: 3px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.gcl-header-badge {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  min-width: 110px;
+}
+
+.gcl-header-badge-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #e5e7eb;
+}
+
+.gcl-header-badge-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #facc15;
+}
+
+/* ====== CARDS ====== */
+.gcl-card {
+  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.98), #020617);
+  border-radius: 16px;
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
+}
+
+.gcl-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Shipper detail card */
+.gcl-shipper-card {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr);
+  gap: 16px;
+}
+
+.gcl-shipper-address {
+  margin-top: 6px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  color: #e5e7eb;
+}
+
+.gcl-shipper-contact h3 {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.gcl-shipper-contact ul {
+  list-style: none;
+  padding-left: 0;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.gcl-shipper-contact li + li {
+  margin-top: 2px;
+}
+
+.gcl-text-muted {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* Summary cards */
+.gcl-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gcl-summary-card {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(30, 64, 175, 0.9));
+  border-radius: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.9);
+}
+
+.gcl-summary-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #9ca3af;
+}
+
+.gcl-summary-value {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.gcl-summary-foot {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+/* Grid 2 columns (middle & bottom rows) */
+.gcl-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr);
+  gap: 12px;
+}
+
+/* Chip list (total shipment) */
+.gcl-chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gcl-chip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 5px 8px;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+}
+
+.gcl-chip-type {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #e5e7eb;
+}
+
+.gcl-chip-total {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Volume bar list */
+.gcl-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gcl-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.3fr) minmax(0, 3fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.gcl-bar-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+}
+
+.gcl-bar-dest {
+  font-weight: 500;
+}
+
+.gcl-bar-type {
+  color: #9ca3af;
+}
+
+.gcl-bar-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  overflow: hidden;
+}
+
+.gcl-bar-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0ea5e9, #facc15);
+}
+
+.gcl-bar-value {
+  font-size: 12px;
+  text-align: right;
+}
+
+/* Tables */
+.gcl-table-wrapper {
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+.gcl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gcl-table thead {
+  background: rgba(15, 23, 42, 0.98);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.gcl-table th,
+.gcl-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+.gcl-table th {
+  text-align: center;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.gcl-table td {
+  color: #d1d5db;
+}
+
+.gcl-table td.right,
+.gcl-table th.right {
+  text-align: right;
+}
+
+/* Invoice badge */
+.gcl-badge-warning {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.7);
+}
+
+/* Multiline cell */
+.gcl-multiline {
+  display: block;
+}
+
+/* Simple responsive hint (optional) */
+@media (max-width: 900px) {
+  .gcl-layout {
+    grid-template-columns: 1fr;
+  }
+  .gcl-sidebar {
+    display: none;
+  }
+  .gcl-shipper-card,
+  .gcl-summary-grid,
+  .gcl-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ====== PIE CHART (Shipments by Service Type) ====== */
+.gcl-pie-wrapper {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.gcl-pie {
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #0ea5e9, #020617);
+  position: relative;
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.9);
+}
+
+.gcl-pie-center {
+  position: absolute;
+  inset: 24px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #020617, #020617);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gcl-pie-total {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.gcl-pie-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #9ca3af;
+}
+
+.gcl-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.gcl-pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gcl-pie-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.gcl-pie-legend-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.gcl-pie-legend-name {
+  font-size: 12px;
+}
+
+.gcl-pie-legend-meta {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ====== TRACKING STATUS BADGES ====== */
+.gcl-badge-info,
+.gcl-badge-warning,
+.gcl-badge-danger,
+.gcl-badge-muted {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gcl-badge-info {
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.7);
+  color: #bfdbfe;
+}
+
+.gcl-badge-warning {
+  background: rgba(250, 204, 21, 0.15);
+  border: 1px solid rgba(250, 204, 21, 0.7);
+  color: #facc15;
+}
+
+.gcl-badge-danger {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.8);
+  color: #fecaca;
+}
+
+.gcl-badge-muted {
+  background: rgba(55, 65, 81, 0.6);
+  border: 1px solid rgba(75, 85, 99, 0.9);
+  color: #e5e7eb;
+}
+
+.gcl-col-booking-no {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Wrapper tabel */
+.gcl-table-wrapper {
+  scrollbar-width: thin;              /* Firefox */
+  scrollbar-color: #0d6efd #f1f1f1;   /* Firefox: thumb warna biru, track abu */
+}
+
+/* Chrome, Edge, Safari */
+.gcl-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.gcl-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;   /* warna track */
+}
+
+.gcl-table-wrapper::-webkit-scrollbar-thumb {
+  background-color: #0d6efd; /* warna thumb sesuai tema (misal biru) */
+  border-radius: 4px;
+}
+
+.gcl-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: #084298; /* warna saat hover */
+}
+

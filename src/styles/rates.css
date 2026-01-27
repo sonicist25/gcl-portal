@@ -1,0 +1,468 @@
+.gcl-rates-page {
+  padding: 24px 32px 40px;
+  color: #e5e7eb;
+}
+
+/* Header */
+
+.gcl-rates-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+.gcl-rates-breadcrumb {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.gcl-rates-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.gcl-rates-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.gcl-rates-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* Mode tabs (kalau nanti dipakai lagi) */
+
+.gcl-rates-mode-tabs {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.gcl-rates-tab {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+}
+
+.gcl-rates-tab-active {
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #fbbf24);
+  color: #0b1120;
+  font-weight: 600;
+}
+
+/* Service tabs */
+
+.gcl-rates-service-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.gcl-rates-service-tab {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  color: #cbd5f5;
+  font-size: 11px;
+  padding: 5px 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.gcl-rates-service-tab.active {
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #fbbf24);
+  color: #0b1120;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/* Card */
+
+.gcl-rates-card {
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.25), transparent 55%),
+    #020617;
+  border-radius: 20px;
+  padding: 18px 22px 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Filters */
+
+.gcl-rates-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.gcl-form-control {
+  min-width: 220px;
+  max-width: 260px;
+}
+
+.gcl-form-control--small {
+  max-width: 180px;
+}
+
+.gcl-form-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.gcl-form-input {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 7px 12px;
+  font-size: 13px;
+  background: radial-gradient(circle at top left, #020617, #020617);
+  color: #e5e7eb;
+  outline: none;
+}
+
+.gcl-form-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.7);
+}
+
+.gcl-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Buttons */
+
+.gcl-btn {
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 7px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gcl-btn-primary {
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #fbbf24);
+  color: #0b1120;
+  font-weight: 600;
+}
+
+.gcl-btn-ghost {
+  background: transparent;
+  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.gcl-btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.gcl-rates-last-updated {
+  margin-left: auto;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Currency toggle */
+
+.gcl-rates-currency-toggle {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.gcl-rates-currency-btn {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.gcl-rates-currency-btn.active {
+  background: #0ea5e9;
+  color: #0b1120;
+  font-weight: 600;
+}
+
+/* Summary bar */
+
+.gcl-rates-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.25),
+    rgba(56, 189, 248, 0.15),
+    rgba(250, 204, 21, 0.1)
+  );
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.gcl-rates-summary-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.gcl-rates-summary-meta {
+  font-size: 12px;
+  color: #cbd5f5;
+}
+
+.gcl-rates-summary-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+/* Results */
+
+.gcl-rates-results {
+  margin-top: 4px;
+}
+
+.gcl-rates-empty {
+  font-size: 13px;
+  padding: 10px 4px;
+  color: #cbd5f5;
+}
+
+/* Table wrapper */
+
+.gcl-rates-table-wrapper {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  margin-bottom: 12px;
+}
+
+/* Semua tabel rate: lebar penuh & kolom fixed supaya rata */
+.gcl-rates-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.gcl-rates-table th,
+.gcl-rates-table td {
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Header style */
+.gcl-rates-table th {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Border bawah tiap baris */
+.gcl-rates-table tbody tr + tr td {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Kolom lane optional jika mau dibedakan */
+.gcl-rates-table th.gcl-col-lane,
+.gcl-rates-table td.gcl-col-lane {
+  width: 24%;
+}
+
+/* Kolom action/booking: lebar konsisten di semua tabel */
+.gcl-rates-table th.gcl-col-action,
+.gcl-rates-table td.gcl-col-action {
+  width: 150px;
+  text-align: center;
+}
+
+/* Remark: lebih lebar & boleh multi-line */
+.gcl-rates-table th.gcl-col-remark,
+.gcl-rates-table td.gcl-col-remark {
+  width: 20%;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+/* --- AIRFREIGHT: angka kecil, remark lebar --- */
+
+/* Table Air harus pakai class .gcl-rates-air-table */
+.gcl-rates-air-table th:nth-child(1),
+.gcl-rates-air-table td:nth-child(1) { /* Airline */
+  width: 12%;
+}
+
+.gcl-rates-air-table th:nth-child(2),
+.gcl-rates-air-table td:nth-child(2), /* M */
+.gcl-rates-air-table th:nth-child(3),
+.gcl-rates-air-table td:nth-child(3), /* N */
+.gcl-rates-air-table th:nth-child(4),
+.gcl-rates-air-table td:nth-child(4), /* 45 */
+.gcl-rates-air-table th:nth-child(5),
+.gcl-rates-air-table td:nth-child(5), /* 100 */
+.gcl-rates-air-table th:nth-child(6),
+.gcl-rates-air-table td:nth-child(6), /* 300 */
+.gcl-rates-air-table th:nth-child(7),
+.gcl-rates-air-table td:nth-child(7), /* 500 */
+.gcl-rates-air-table th:nth-child(8),
+.gcl-rates-air-table td:nth-child(8)  /* 1000 */ {
+  width: 8%;
+  text-align: right;
+}
+
+/* Booking col sudah diatur via .gcl-col-action */
+
+/* --- Airline logo cell --- */
+
+.gcl-airline-cell {
+  display: flex;
+  flex-direction: column;   /* logo di atas, nama di bawah */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.gcl-airline-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 2px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.gcl-airline-name {
+  font-size: 6px;
+  font-weight: 500;
+  text-align: center;
+  color: #e5e7eb;
+  line-height: 1.2;
+}
+
+
+.gcl-airline-name-fallback {
+  font-size: 12px;
+}
+
+/* Lane text */
+
+.gcl-rates-lane {
+  font-weight: 500;
+}
+
+/* FCL grouped cards */
+
+.gcl-rates-fcl-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gcl-rates-fcl-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.gcl-rates-fcl-header {
+  background: #1d4ed8;
+  color: #f9fafb;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Book button – glossy pill */
+
+.gcl-book-pill-btn {
+  border: none;
+  cursor: pointer;
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    #4adeff 0%,
+    #0ea5e9 45%,
+    #0369a1 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(191, 219, 254, 0.7),
+    0 6px 14px rgba(15, 23, 42, 0.8);
+  position: relative;
+}
+
+.gcl-book-pill-btn::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 46%;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.05)
+  );
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.gcl-book-pill-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(191, 219, 254, 0.9),
+    0 8px 18px rgba(15, 23, 42, 0.95);
+}
+
+/* Footer note */
+
+.gcl-rates-footer-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #9ca3af;
+}

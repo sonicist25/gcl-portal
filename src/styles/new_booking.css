@@ -1,0 +1,144 @@
+/* BACKDROP – layer hitam transparan full screen */
+.gcl-modal-backdrop {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  background: rgba(15, 23, 42, 0.6); /* semi-dark */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999; /* di atas semua card/tabel */
+}
+
+/* BOX MODAL UTAMA */
+.gcl-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: min(1100px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 20px 40px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+  font-size: 13px;
+}
+
+/* HEADER / TITLE BAR */
+.gcl-modal-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, #0f172a, #1e293b);
+  color: #e5e7eb;
+}
+
+.gcl-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* TOMBOL X CLOSE */
+.gcl-modal-close {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gcl-modal-close:hover {
+  background: rgba(148, 163, 184, 0.25);
+}
+
+/* BODY – konten form */
+.gcl-modal-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  background: #f9fafb;
+}
+
+/* FOOTER – tombol Save/Cancel */
+.gcl-modal-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: #f3f4f6;
+}
+
+/* Kolom2 di dalam modal supaya rapi */
+.gcl-form-column {
+  padding: 8px 10px;
+  background: #428bd4;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.gcl-form-group {
+  margin-bottom: 8px;
+}
+
+.gcl-form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d9d4d4;
+  margin-bottom: 3px;
+}
+
+.gcl-form-group input,
+.gcl-form-group select,
+.gcl-form-group textarea {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  padding: 5px 7px;
+  font-size: 12px;
+  outline: none;
+}
+
+.gcl-form-group input:focus,
+.gcl-form-group select:focus,
+.gcl-form-group textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+}
+
+/* Tombol gaya template (kalau belum ada) */
+.gcl-btn {
+  border-radius: 999px;
+  border: none;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gcl-btn-primary {
+  background: linear-gradient(90deg, #0ea5e9, #2563eb);
+  color: white;
+}
+
+.gcl-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.gcl-btn-ghost {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.gcl-btn-ghost:hover {
+  background: #e5e7eb;
+}

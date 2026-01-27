@@ -1,0 +1,525 @@
+/* ROOT LAYOUT DI DALAM GclLayout */
+.gcl-dashboard-page {
+  padding: 20px 24px 32px;
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+}
+
+/* ===== CUSTOMER TIER BADGE (ICON ONLY) ===== */
+.gcl-tier-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.8);
+  position: relative;
+}
+
+.gcl-tier-icon-inner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.9);
+}
+
+/* text di sebelah icon */
+.gcl-dash-tier-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.gcl-dash-tier-line1 {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.gcl-dash-tier-line2 {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gcl-dash-tier-line3 {
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+/* warna icon per tier (nama class internal saja, tidak tampil di teks) */
+.gcl-tier-bronze .gcl-tier-icon-inner {
+  background: radial-gradient(circle at 30% 0%, #fed7aa, #b45309);
+}
+
+.gcl-tier-silver .gcl-tier-icon-inner {
+  background: radial-gradient(circle at 30% 0%, #e5e7eb, #6b7280);
+}
+
+.gcl-tier-gold .gcl-tier-icon-inner {
+  background: radial-gradient(circle at 30% 0%, #fef3c7, #d97706);
+}
+
+.gcl-tier-platinum .gcl-tier-icon-inner {
+  background: radial-gradient(circle at 30% 0%, #e0f2fe, #6366f1);
+}
+
+
+/* BAR ATAS: BREADCRUMB + SHIPPER ID */
+.gcl-dash-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.gcl-dash-breadcrumb {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #93c5fd;
+}
+
+.gcl-dash-shipper-id-badge {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  padding: 6px 12px;
+  font-size: 11px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.3), #020617);
+}
+.gcl-dash-shipper-id-badge span {
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+.gcl-dash-shipper-id-badge strong {
+  font-size: 13px;
+}
+
+/* COMPANY NAME ROW */
+.gcl-dash-company-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;      /* ini yang bikin sejajar vertikal */
+  margin-bottom: 16px;
+}
+
+/* badge + icon (yang sebelumnya sudah kita buat) */
+.gcl-dash-tier-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), #020617);
+  font-size: 10px;
+  color: #e5e7eb;
+}
+
+.gcl-dash-company-name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gcl-dash-company-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+.gcl-dash-company-meta span {
+  color: #e5e7eb;
+}
+
+/* GENERIC CARD */
+.gcl-card {
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.2), rgba(15, 23, 42, 0.9));
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 14px 18px;
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.8);
+}
+
+/* ROWS */
+.gcl-dash-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+/* shipper detail full width */
+.gcl-card-shipper-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.gcl-card-shipper-left,
+.gcl-card-shipper-right {
+  flex: 1;
+}
+
+.gcl-card-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.gcl-card-shipper-address,
+.gcl-card-shipper-contact {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* SUMMARY ROW: 3 CARDS */
+.gcl-dash-row-summary .gcl-card-summary {
+  flex: 1;
+}
+
+.gcl-card-summary-main {
+  margin-top: 4px;
+}
+
+.gcl-card-summary-number {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.gcl-card-summary-title {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.gcl-card-summary-sub {
+  margin-top: 4px;
+  color: #9ca3af;
+}
+
+/* middle row layout */
+.gcl-dash-row-middle {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr; /* pie lebih lebar */
+  gap: 16px;
+}
+
+/* === SHIPMENT MIX === */
+
+.gcl-card-mix-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.gcl-mix-pie {
+  flex: 0 0 260px;
+  height: 220px;
+}
+
+/* legend di kanan */
+.gcl-mix-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gcl-mix-legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  color: #e5e7eb;
+}
+
+.gcl-mix-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 3px;
+}
+
+.gcl-mix-legend-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.gcl-mix-legend-name {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.gcl-mix-legend-sub {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+/* === TOP DESTINATIONS BAR === */
+
+.gcl-card-top-dest-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gcl-top-dest-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.gcl-top-dest-name {
+  flex: 0 0 180px;
+}
+
+.gcl-top-dest-dest {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.gcl-top-dest-service {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.gcl-top-dest-bar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gcl-top-dest-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.8);
+  overflow: hidden;
+}
+
+.gcl-top-dest-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  /* gradient mirip versi lama */
+  background: linear-gradient(90deg, #22d3ee, #a855f7, #facc15);
+}
+
+.gcl-top-dest-vol {
+  font-size: 10px;
+  color: #e5e7eb;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* BOTTOM ROW: TABLES */
+.gcl-dash-row-bottom > .gcl-card {
+  flex: 1;
+}
+
+.gcl-card-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.gcl-table-wrapper {
+  margin-top: 8px;
+  max-height: 280px;
+  overflow: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(51, 65, 85, 0.9);
+}
+
+.gcl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.gcl-table thead {
+  background: rgba(15, 23, 42, 0.95);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.gcl-table th,
+.gcl-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+  white-space: nowrap;
+}
+
+.gcl-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.gcl-table tbody tr:nth-child(even) {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.gcl-table-empty {
+  text-align: center;
+  color: #9ca3af;
+}
+
+/* Status pill */
+.gcl-pill {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+/* Base pill untuk invoice status */
+.gcl-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+  min-width: 70px;
+  text-align: center;
+}
+
+/* UNPAID – merah / oranye */
+.gcl-pill-unpaid {
+  background: linear-gradient(90deg, #b91c1c, #f97316);
+  border-color: #f97316;
+  color: #fff7ed;
+}
+
+/* PAID – hijau */
+.gcl-pill-paid {
+  background: linear-gradient(90deg, #16a34a, #4ade80);
+  border-color: #22c55e;
+  color: #022c22;
+}
+
+/* status lain kalau ada (CANCEL, PARTIAL, dll) */
+.gcl-pill-neutral {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: #6b7280;
+  color: #e5e7eb;
+}
+
+
+/* Overlay untuk loading / error */
+.gcl-dash-overlay {
+  position: fixed;
+  inset: 70px 20px 20px 260px;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.97));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #e5e7eb;
+  pointer-events: none;
+}
+.gcl-dash-overlay.error {
+  color: #fecaca;
+}
+
+/* ==== Tracking Status Pills ==== */
+.gcl-pill-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  min-width: 90px;
+  text-align: center;
+}
+
+/* default / not tracked / unknown */
+.gcl-pill-status-none {
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e5e7eb;
+}
+
+/* Active = hijau/teal */
+.gcl-pill-status-active {
+  background: linear-gradient(135deg, #22c55e, #14b8a6);
+  border-color: rgba(34, 197, 94, 0.8);
+  color: #022c22;
+}
+
+/* Pending = kuning */
+.gcl-pill-status-pending {
+  background: linear-gradient(135deg, #eab308, #facc15);
+  border-color: rgba(234, 179, 8, 0.9);
+  color: #3b2f0b;
+}
+
+/* Delayed = merah/oranye */
+.gcl-pill-status-delayed,
+.gcl-pill-status-probable-delay {
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  border-color: rgba(239, 68, 68, 0.9);
+  color: #fff7ed;
+}
+
+/* Action Required = merah lebih keras */
+.gcl-pill-status-action-required {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border-color: rgba(239, 68, 68, 1);
+  color: #fee2e2;
+}
+
+/* Completed = hijau stabil */
+.gcl-pill-status-completed {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border-color: rgba(34, 197, 94, 1);
+  color: #022c22;
+}
+
+/* Perfect = biru muda */
+.gcl-pill-status-perfect {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  border-color: rgba(59, 130, 246, 0.9);
+  color: #e0f2fe;
+}
+
+/* Expired = merah gelap */
+.gcl-pill-status-expired {
+  background: rgba(127, 29, 29, 0.9);
+  border-color: rgba(248, 113, 113, 0.9);
+  color: #fee2e2;
+}
+
+/* Invalid / Data Not Found = abu keunguan */
+.gcl-pill-status-invalid,
+.gcl-pill-status-data-not-found {
+  background: rgba(30, 64, 175, 0.35);
+  border-color: rgba(129, 140, 248, 0.9);
+  color: #e5e7eb;
+}
+
+/* Yet to Start = biru soft */
+.gcl-pill-status-yet {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(96, 165, 250, 0.8);
+  color: #bfdbfe;
+}
+
