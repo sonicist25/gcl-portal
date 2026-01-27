@@ -402,6 +402,9 @@ function BookingList() {
 function NewBookingModal({ open, onClose, onSubmit }) {
   const [cityOptions, setCityOptions] = useState([]);
   const [etdOptions, setEtdOptions] = useState([]);
+  const now = new Date();
+  const booking_number = `GTW-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+
 
   const [form, setForm] = useState({
     region_id: "",
@@ -410,7 +413,7 @@ function NewBookingModal({ open, onClose, onSubmit }) {
     TypeTransaction: "LCL",
     textMovementtype: "CFS/CFS",
     textPlan: "Consol",
-    booking_number: `GTW-${new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14)}`,
+    booking_number: booking_number,
     textfieldSI: "",
     shipper: "", textareaShipper: "", contactshipper: "", contactemail: "",
     consignee: "", textareaConsignee: "",
