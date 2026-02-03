@@ -7,8 +7,12 @@ import RatesPage from "./pages/RatesPage";
 import QuotationList from "./pages/QuotationList";
 import QuotationDetail from "./pages/QuotationDetail";
 import BookingPage from "./pages/BookingPage";
-import GocometTracking from "./pages/GocometTracking";
 import InvoiceList from "./pages/InvoiceList";
+
+// PERHATIKAN: Cek lokasi file GocometTracking anda.
+// Jika file ada di folder "src/components/", ubah import di bawah ini menjadi:
+// import GocometTracking from "./components/GocometTracking";
+import GocometTracking from "./pages/GocometTracking"; 
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("gcl_access_token");
@@ -69,7 +73,6 @@ function App() {
           }
         />
 
-        {/* NEW: bookings */}
         <Route
           path="/bookings"
           element={
@@ -79,14 +82,15 @@ function App() {
           }
         />
 
+        {/* PERBAIKAN DI SINI: Ubah "/trackings" menjadi "/tracking" */}
         <Route
-        path="/trackings"
-        element={
-          <RequireAuth>
-            <GocometTracking />
-          </RequireAuth>
-        }
-      />
+          path="/tracking" 
+          element={
+            <RequireAuth>
+              <GocometTracking />
+            </RequireAuth>
+          }
+        />
 
         <Route
           path="/invoices"

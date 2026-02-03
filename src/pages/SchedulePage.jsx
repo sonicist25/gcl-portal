@@ -1,6 +1,8 @@
 // src/pages/SchedulePage.jsx
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2"; // Import SweetAlert
 import GclLayout from "../layouts/GclLayout";
+import NewBookingModal from "./NewBookingModal";
 import "../styles/schedule.css";
 
 const API_BASE =
@@ -20,6 +22,10 @@ export default function SchedulePage() {
   const [data, setData] = useState({ direct: [], via: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // --- STATE MODAL ---
+  const [showModal, setShowModal] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
 
   // opsi bulan (bulan ini + 3 bulan)
   const monthOptions = (() => {
@@ -95,6 +101,107 @@ export default function SchedulePage() {
       aborted = true;
     };
   }, [mode, month]);
+
+  // --- HANDLER: BUKA MODAL DARI TOMBOL BOOK ---
+  const handleBook = (row, group) => {
+    const isVia = row._type === "via";
+
+    // Siapkan data object yang akan dibaca oleh NewBookingModal
+    const scheduleData = {
+        isFromSchedule: true, // Flag penting agar Modal tahu ini data pre-fill
+        
+        // Routing Info
+        // Note: Logic penggabungan string (concatenation) sudah dihandle Modal, 
+        // tapi kita kirim data mentah yang relevan.
+        vessel: row.vessel, 
+        voy_vessel: row.voy_vessel, // Khusus Via
+        connecting_vessel: row.connecting_vessel, // Khusus Via
+        
+        voyage: row.voyage,
+        voy_con: row.voy_con, // Khusus Via
+
+        // Dates
+        // Mapping: Direct pakai 'etd', Via pakai 'etd_jkt'
+        etd_jkt: isVia ? row.etd_jkt : row.etd, 
+        eta: row.eta,
+        // Mapping: Direct pakai 'closing_date', Via pakai 'stf_cls'
+        closing_date: isVia ? row.stf_cls : row.closing_date,
+
+        // Location (Dari Grouping Header & Row)
+        origin_city: group.origin,
+        destination_city: group.destination,
+        trans_city: isVia ? (row.etd_city_con_name || "SINGAPORE") : "",
+
+        route_type: isVia ? "VIA" : "DIRECT"
+    };
+
+    setSelectedSchedule(scheduleData);
+    setShowModal(true);
+  };
+
+  // --- HANDLER: SUBMIT BOOKING KE API ---
+  const handleSubmitBooking = async (formData) => {
+    // 1. Tampilkan Loading
+    Swal.fire({
+        title: 'Saving Booking...',
+        text: 'Sending data to Gateway server',
+        allowOutsideClick: false,
+        background: '#1e293b', 
+        color: '#f8fafc',
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const token = localStorage.getItem("gcl_access_token");
+        if (!token) throw new Error("Please login first.");
+
+        // 2. Siapkan Payload (x-www-form-urlencoded)
+        const payload = new URLSearchParams();
+        Object.keys(formData).forEach(key => {
+            const val = formData[key] === null || formData[key] === undefined ? "" : formData[key];
+            payload.append(key, val);
+        });
+
+        // Default fields tambahan
+        payload.append("user_first_name", localStorage.getItem("username") || "User App");
+        if (!formData.origin_country) payload.append("origin_country", "INDONESIA");
+
+        // 3. Hit API
+        const response = await fetch(`${API_BASE}/instant_booking`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": `Bearer ${token}`,
+                "X-API-KEY": "gateway-fms",
+            },
+            body: payload
+        });
+
+        const json = await response.json();
+
+        if (!response.ok) throw new Error(json.message || `Server Error: ${response.status}`);
+        if (json.error || (json.status && json.status !== 201)) throw new Error(json.message || "Failed to save booking.");
+
+        // 4. Sukses
+        await Swal.fire({
+            icon: 'success',
+            title: 'Booking Created!',
+            text: json.message || 'Booking successfully saved.',
+            background: '#1e293b', color: '#f8fafc', confirmButtonColor: '#3b82f6'
+        });
+
+        setShowModal(false);
+        // Opsional: Redirect ke Booking List
+        // navigate('/booking-list');
+
+    } catch (error) {
+        console.error("Submit Error:", error);
+        Swal.fire({
+            icon: 'error', title: 'Failed', text: error.message,
+            background: '#1e293b', color: '#f8fafc', confirmButtonColor: '#ef4444'
+        });
+    }
+  };
 
   const isExport = mode === "export";
 
@@ -230,21 +337,6 @@ export default function SchedulePage() {
                 }
               />
             </div>
-
-            {/* <div className="gcl-form-control">
-              <label className="gcl-form-label">Month</label>
-              <select
-                className="gcl-form-input"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-              >
-                {monthOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div> */}
           </div>
 
           {/* hasil */}
@@ -299,7 +391,7 @@ export default function SchedulePage() {
                     >
                       {headerLabel}
                     </div>
-                   <table className="gcl-schedule-table">
+                    <table className="gcl-schedule-table">
                       <thead>
                         <tr
                           style={{
@@ -346,16 +438,7 @@ export default function SchedulePage() {
                                 <button
                                   type="button"
                                   className="gcl-booking-btn"
-                                  onClick={() => {
-                                    // TODO: sambungkan ke flow booking / prefill form
-                                    console.log("Booking clicked", {
-                                      origin: group.origin,
-                                      destination: group.destination,
-                                      vessel,
-                                      voyage,
-                                      etd,
-                                    });
-                                  }}
+                                  onClick={() => handleBook(row, group)} // --- TRIGGER MODAL ---
                                 >
                                   Book
                                 </button>
@@ -383,6 +466,18 @@ export default function SchedulePage() {
             </div>
           )}
         </div>
+
+        {/* --- NEW BOOKING MODAL --- */}
+        <NewBookingModal 
+            open={showModal}
+            onClose={() => {
+                setShowModal(false);
+                setSelectedSchedule(null);
+            }}
+            onSubmit={handleSubmitBooking}
+            initialData={selectedSchedule}
+        />
+
       </div>
     </GclLayout>
   );

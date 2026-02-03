@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import GclLayout from "../layouts/GclLayout";
 import { apiFetch } from "../utils/authApi";
 import {
@@ -765,11 +766,11 @@ const DashboardPage = () => {
               <table className="gcl-table">
                 <thead>
                   <tr>
-                    <th>ETD JKT</th>
+                    <th>ETD/ETA</th>
                     <th>Customer Ref</th>
                     <th>Vessel</th>
                     <th>Dest</th>
-                    <th>Job Ref</th>
+                    <th>BL</th>
                     <th>Tracking</th>
                   </tr>
                 </thead>
@@ -778,17 +779,30 @@ const DashboardPage = () => {
                     const trackingMeta = getTrackingStatusMeta(b.status_gocomet);
                     return (
                       <tr key={b.kode_ref}>
-                        <td>{formatDateYmd(b.etd_jkt)}</td>
+                        <td>{formatDateYmd(b.etd_jkt)+" / "+formatDateYmd(b.eta)}</td>
                         <td>{b.no_from_shipper || "-"}</td>
                         <td>{b.feeder_vessel || "-"}</td>
                         <td>{b.destination || "-"}</td>
-                        <td>{b.kode_ref}</td>
+                        <td>{b.hb_l}</td>
                         <td>
-                          <span className={trackingMeta.className}>
-                            {trackingMeta.label}
-                          </span>
-                        </td>
-                      </tr>
+                        {/* UPDATE: LINK KE TRACKING */}
+                        {b.hb_l ? (
+                            <Link 
+                                to={`/tracking?si_number=${encodeURIComponent(b.hb_l)}`}
+                                className="gcl-tracking-link"
+                                title="Click to Track"
+                            >
+                                <span className={`${trackingMeta.className} hover-scale`}>
+                                    {trackingMeta.label} ↗
+                                </span>
+                            </Link>
+                        ) : (
+                            <span className={trackingMeta.className}>
+                                {trackingMeta.label}
+                            </span>
+                        )}
+                    </td>
+                  </tr>
                     );
                   })}
 

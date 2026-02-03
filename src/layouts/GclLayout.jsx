@@ -65,7 +65,7 @@ export default function GclLayout({ children }) {
           
           <button
             className={`gcl-nav-item ${isActive("trackings") ? "active" : ""}`}
-            onClick={() => navigate("/trackings")}
+            onClick={() => navigate("/tracking")}
           >
             Tracking
           </button>

@@ -1,304 +1,216 @@
-.gocomet-wrap {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  font-size: 12px;
-  color: #222;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 16px;
-  background: #fff;
+/* Container Utama */
+.gocomet-dark-container {
+    background-color: #0f172a;
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* FORM */
-.gocomet-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-end;
-  margin-bottom: 12px;
+/* Top Bar */
+.gocomet-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.page-title { margin: 0; font-size: 1.5rem; color: #fff; }
+.search-inline { display: flex; gap: 10px; }
+.si-input {
+    background: #1e293b; border: 1px solid #334155;
+    color: white; padding: 8px 12px; border-radius: 6px; width: 250px;
+}
+button {
+    background: #2563eb; color: white; border: none;
+    padding: 8px 20px; border-radius: 6px; cursor: pointer;
 }
 
-.gocomet-form-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 240px;
-  flex: 1;
+/* Dashboard Grid Layout */
+.dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.gocomet-label-main {
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 4px;
+/* 1. Header Panel (Fixed Design) */
+.header-panel {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 Kolom Rata */
+    gap: 20px;
+    align-items: start;
 }
 
-.gocomet-input {
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 6px 8px;
-  font-size: 12px;
-  outline: none;
+.header-item { display: flex; flex-direction: column; gap: 5px; }
+.header-item.full-width { grid-column: span 4; border-top: 1px solid #334155; padding-top: 15px; margin-top: 5px; }
+
+.lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
+.val { font-size: 1.1rem; font-weight: 600; color: #f8fafc; }
+.val-sm { font-size: 0.9rem; color: #cbd5e1; }
+
+.val-badge {
+    display: inline-block; padding: 4px 10px; border-radius: 4px;
+    font-size: 0.85rem; font-weight: bold; width: fit-content;
+}
+.val-badge.succ { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+.val-badge.warn { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+
+/* 2. Map Panel */
+.map-panel {
+    height: 350px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #334155;
+}
+.leaflet-map-view { height: 100%; width: 100%; background: #0f172a; }
+.map-loading { height: 100%; display: flex; align-items: center; justify-content: center; color: #64748b; }
+
+/* 3. Journey / Stepper Panel */
+.journey-panel {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 24px;
+}
+.panel-title { margin-top: 0; margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+
+.timeline-wrapper { display: flex; flex-direction: column; }
+.tl-item { display: flex; gap: 16px; min-height: 80px; }
+
+.tl-left { display: flex; flex-direction: column; align-items: center; width: 24px; }
+.tl-dot { width: 12px; height: 12px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1); }
+.tl-line { width: 2px; flex-grow: 1; background: #334155; margin-top: 4px; }
+
+.tl-content { padding-bottom: 20px; width: 100%; }
+.tl-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.tl-loc { font-size: 1rem; font-weight: 600; color: white; }
+.tl-type { font-size: 0.75rem; background: #334155; padding: 2px 6px; border-radius: 4px; color: #cbd5e1; }
+
+.tl-vessel {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #334155;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.v-icon { font-size: 1.2rem; }
+.v-detail { display: flex; flex-direction: column; font-size: 0.9rem; color: #e2e8f0; }
+.v-detail span { font-size: 0.8rem; color: #94a3b8; }
+
+.tl-time { font-size: 0.85rem; color: #94a3b8; margin-top: 4px; }
+
+/* Responsive Header */
+@media (max-width: 768px) {
+    .header-panel { grid-template-columns: 1fr 1fr; }
+    .header-item.full-width { grid-column: span 2; }
+}
+/* Style Kapal (Default Blue) */
+.tl-vessel {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #334155;
+    /* ... style lama ... */
 }
 
-.gocomet-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+/* Style Dokumen (Yellow/Orange) */
+.tl-vessel.doc-type {
+    border-color: #d97706; /* Amber */
+    background: rgba(217, 119, 6, 0.1);
+}
+.tl-vessel.doc-type .v-icon { color: #fbbf24; }
+
+/* Style Trucking (Green) */
+.tl-vessel.truck-type {
+    border-color: #059669; /* Emerald */
+    background: rgba(5, 150, 105, 0.1);
+}
+.tl-vessel.truck-type .v-icon { color: #34d399; }
+
+/* --- EMPTY STATE & ANIMATION --- */
+.empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px; /* Tinggi minimal agar layout tidak gepeng */
+    text-align: center;
+    color: #94a3b8;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(30, 41, 59, 0.3) 100%);
+    border-radius: 12px;
+    border: 1px dashed #334155;
+    margin-top: 20px;
 }
 
-.gocomet-btn {
-  border: none;
-  border-radius: 6px;
-  padding: 7px 14px;
-  font-size: 12px;
-  cursor: pointer;
-  background: #1d4ed8;
-  color: #fff;
-  font-weight: 600;
-  transition: transform 0.05s ease, box-shadow 0.05s ease,
-    background 0.1s ease;
+.empty-illustration {
+    width: 180px;
+    height: 180px;
+    margin-bottom: 24px;
+    opacity: 0.8;
+    animation: float 6s ease-in-out infinite; /* Animasi mengapung */
 }
 
-.gocomet-btn:hover {
-  background: #1e40af;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+.empty-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 12px;
 }
 
-.gocomet-btn:active {
-  transform: translateY(1px);
-  box-shadow: none;
+.empty-desc {
+    font-size: 0.95rem;
+    max-width: 400px;
+    line-height: 1.6;
+    margin-bottom: 30px;
 }
 
-/* HEADER */
-.gocomet-header-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: center;
-  justify-content: space-between;
+.feature-pills {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
-.gocomet-header-item {
-  min-width: 120px;
-}
-.gocomet-header-card {
-  background: #66b7ee;
-  border-radius: 8px;
-  padding: 15px 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-}
-
-.gocomet-header-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: center;
-  justify-content: space-between;
+.pill {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
-.gocomet-header-item {
-  min-width: 140px;
+/* Keyframes untuk efek mengapung kapal/icon */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
 }
 
-.gocomet-header-note {
-  margin-top: 12px;
-  padding: 10px;
-  background: #f9f9f9;
-  border-left: 4px solid #007bff;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #333;
+/* Loading Skeleton sederhana jika sedang fetch */
+.loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    color: #38bdf8;
 }
-
-.gocomet-header-note .note-title {
-  font-weight: 600;
-  margin-right: 6px;
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(56, 189, 248, 0.3);
+    border-radius: 50%;
+    border-top-color: #38bdf8;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 15px;
 }
-.gocomet-header {
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  background: #f4f8ff;
-  border: 1px solid #d5e0ff;
-}
-
-.gocomet-header-main,
-.gocomet-header-extra {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-bottom: 8px;
-}
-
-.gocomet-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #666;
-  margin-bottom: 2px;
-}
-
-.gocomet-value {
-  font-weight: 600;
-}
-
-.gocomet-status {
-  font-weight: 700;
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  border: 1px solid #b0d4b0;
-  background: #e7f7e7;
-}
-
-/* status variants */
-.gocomet-status.completed {
-  border-color: #4caf50;
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.gocomet-status.transit {
-  border-color: #ffb300;
-  background: #fff8e1;
-  color: #ef6c00;
-}
-
-.gocomet-status.delayed {
-  border-color: #e53935;
-  background: #ffebee;
-  color: #b71c1c;
-}
-
-.gocomet-header-arrived {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #444;
-}
-
-/* BLOCK */
-.gocomet-block {
-  margin-bottom: 20px;
-}
-
-.gocomet-block-title {
-  font-weight: 700;
-  margin-bottom: 8px;
-  border-left: 3px solid #2563eb;
-  padding-left: 8px;
-}
-
-/* ROUTING */
-.gocomet-routing {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.gocomet-routing-card {
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  padding: 10px 12px;
-  min-width: 220px;
-  background: #fafafa;
-}
-
-.gocomet-routing-line {
-  font-size: 11px;
-  margin-top: 3px;
-}
-
-.gocomet-routing-label {
-  font-weight: 600;
-}
-
-/* STEPPER */
-.gocomet-stepper {
-  position: relative;
-  padding-left: 18px;
-  border-left: 2px solid #cbd5e0;
-}
-
-.gocomet-step-node {
-  position: relative;
-  margin-bottom: 14px;
-}
-
-.gocomet-step-dot {
-  position: absolute;
-  left: -10px;
-  top: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  border: 2px solid #2563eb;
-  background: #fff;
-}
-
-.gocomet-step-content {
-  margin-left: 8px;
-}
-
-.gocomet-step-title {
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.gocomet-step-meta {
-  font-size: 11px;
-  color: #555;
-  margin-top: 2px;
-}
-
-/* EVENT LIST */
-.gocomet-events-wrapper {
-  max-height: 260px;
-  overflow: auto;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-}
-
-.gocomet-events-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11px;
-}
-
-.gocomet-events-table thead {
-  background: #f3f4f6;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.gocomet-events-table th,
-.gocomet-events-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid #e5e7eb;
-  vertical-align: top;
-}
-
-.gocomet-events-table tbody tr:nth-child(even) {
-  background: #fafafa;
-}
-
-/* EMPTY & MESSAGE */
-.gocomet-empty {
-  font-size: 11px;
-  color: #666;
-}
-
-.gocomet-message {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #b91c1c;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* LOADING */
-.gocomet-wrap.loading {
-  opacity: 0.6;
-  pointer-events: none;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
