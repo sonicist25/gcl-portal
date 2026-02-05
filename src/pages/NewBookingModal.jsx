@@ -40,6 +40,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
 
   // Default State
   const defaultForm = {
+    schedule_id: "", // Field ID schedule untuk backend
     region_id: "", city_identifier: "", etd_jkt_search: "",
     TypeTransaction: "LCL", textMovementtype: "CFS/CFS", textPlan: "Consol",
     booking_number: defaultBookingNo,
@@ -53,7 +54,8 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
     txtETDJKT: "", txtETA: "", txtClosingDoc: "", txtClosingCar: "",
     dropdownPortLoading: "TANJUNG PRIOK", dropdownPortTrans: "", dropdownPortdestination: "",
     vessel: "", voyage: "",
-    warehouse: "", sales_name: "", do_number: "", wh_arrival: "",
+    warehouse: "", // Akan terisi otomatis dari detail booking atau hasil search
+    sales_name: "", do_number: "", wh_arrival: "",
     textfieldFreight: "PREPAID", textfieldIncoterm: "EXW", BLtype: "3 ORIGINAL",
     pickupDateTime: "",
     house_bl: "",
@@ -80,6 +82,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
 
              setForm({
                 ...defaultForm,
+                schedule_id: initialData.id || "", // Ambil ID jika ada di initialData
                 vessel: initialData.vessel || "",
                 voyage: initialData.voyage || "",
                 txtETDJKT: initialData.etd_jkt || "",
@@ -90,6 +93,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                 txtClosingDoc: toDateTimeLocal(initialData.closing_date),
                 txtClosingCar: toDateTimeLocal(initialData.closing_date),
                 route_type_text: initialData.route_type || "DIRECT",
+                warehouse: initialData.warehouse || "", 
                 region_id: "Jakarta" 
              });
              return; 
@@ -125,6 +129,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
 
               setForm({
                  ...defaultForm,
+                 schedule_id: b.schedule_id || "", 
                  booking_number: b.booking_code,
                  TypeTransaction: b.mode || "LCL", 
                  textMovementtype: b.movement_type,
@@ -142,7 +147,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                  txtClosingCar: toDateTimeLocal(b.closing_cargo),
                  textfieldSI: b.si_number,
                  house_bl: b.house_bl,
-                 warehouse: b.warehouse,
+                 warehouse: b.warehouse || "",
                  shipper: d.shipper_name,
                  textareaShipper: d.shipper_address,
                  contactshipper: d.cp_name,
@@ -246,8 +251,12 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
 
   const applyScheduleToForm = (schedule, type) => {
     const closingDate = schedule.closing_date || schedule.stf_cls || "";
+    
+    // --- UPDATE STATE: Termasuk ID dan Warehouse ---
     setForm(prev => ({
         ...prev,
+        schedule_id: schedule.id,         // Menangkap ID dari JSON (Direct maupun Via)
+        warehouse: schedule.warehouse || "", // Menangkap Warehouse
         vessel: schedule.vessel + (schedule.voy_vessel ? " " + schedule.voy_vessel : ""),
         voyage: schedule.voyage || (schedule.connecting_vessel + " " + (schedule.voy_con||"")),
         txtETDJKT: schedule.etd || schedule.etd_jkt || "",
@@ -258,6 +267,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
         txtClosingCar: closingDate ? `${closingDate}T23:59` : "",
         route_type_text: type
     }));
+    
     Swal.fire({ icon: 'success', title: 'Schedule Applied', timer: 1000, showConfirmButton: false, background: theme.paper, color: theme.textMain });
   };
 
@@ -273,6 +283,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
         
         let candidates = [];
         if (json.data) json.data.forEach(g => {
+            // Logika ini sudah menangkap DIRECT dan VIA
             if(g.direct) g.direct.forEach(d => candidates.push({...d, _type: 'DIRECT'}));
             if(g.via) g.via.forEach(v => candidates.push({...v, _type: 'VIA'}));
         });
@@ -280,6 +291,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
         if (candidates.length === 1) applyScheduleToForm(candidates[0], candidates[0]._type);
         else if (candidates.length > 1) {
              const inputOptions = {};
+             // Menampilkan pilihan ke user
              candidates.forEach((c, i) => inputOptions[i] = `${c._type} - ${c.vessel} - ETD ${c.etd || c.etd_jkt}`);
              const { value: idx } = await Swal.fire({ 
                  title: 'Select Route', input: 'select', inputOptions, 
@@ -450,6 +462,12 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
 
                 {/* FORM GRID */}
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} id="new-booking-form">
+                    
+                    {/* --- HIDDEN INPUTS AGAR TERKIRIM KE BACKEND --- */}
+                    <input type="hidden" name="schedule_id" value={form.schedule_id || ""} />
+                    <input type="hidden" name="warehouse" value={form.warehouse || ""} />
+                    {/* ----------------------------------------------- */}
+
                     <div style={styles.grid3Column}>
                         {/* COL 1: GENERAL */}
                         <div style={styles.column}>
