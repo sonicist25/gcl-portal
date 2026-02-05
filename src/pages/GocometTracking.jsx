@@ -275,7 +275,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
                 <input 
                   value={inputSi} 
                   onChange={e => setInputSi(e.target.value)} 
-                  placeholder="Enter SI Number..." 
+                  placeholder="Enter HBL Number..." 
                   className="si-input" 
                 />
                 <button type="submit" disabled={loading}>
