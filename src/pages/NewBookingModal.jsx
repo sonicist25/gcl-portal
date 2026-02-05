@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { FaPlus, FaInfoCircle, FaTimes, FaSearch, FaSave, FaShip, FaMapMarkerAlt, FaFilePdf, FaPrint } from "react-icons/fa";
 import Swal from "sweetalert2";
 
-
 // --- THEME CONFIGURATION (DARK MODE) ---
 const theme = {
   bg: "#0f172a", paper: "#1e293b", inputBg: "#334155", border: "#475569",
@@ -31,7 +30,10 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
   const [cityOptions, setCityOptions] = useState([]);
   const [etdOptions, setEtdOptions] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState(false); // Loading saat fetch detail
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  
+  // --- STATE BARU UNTUK READONLY ---
+  const [isReadOnly, setIsReadOnly] = useState(false); 
 
   const now = new Date();
   const defaultBookingNo = `GTW-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
@@ -54,10 +56,13 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
     warehouse: "", sales_name: "", do_number: "", wh_arrival: "",
     textfieldFreight: "PREPAID", textfieldIncoterm: "EXW", BLtype: "3 ORIGINAL",
     pickupDateTime: "",
-    house_bl: "", // Added default empty
+    house_bl: "",
   };
 
   const [form, setForm] = useState(defaultForm);
+
+  // Helper untuk dynamic style input
+  const getInputStyle = () => isReadOnly ? { ...styles.inputField, ...styles.readOnlyField } : styles.inputField;
 
   // --- 1. FETCH DETAIL / POPULATE DATA ---
   useEffect(() => {
@@ -67,17 +72,14 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
           
           // --- KASUS A: DARI SCHEDULE PAGE (Pre-fill Routing) ---
           if (initialData.isFromSchedule) {
+             setIsReadOnly(false); // Pastikan editable
              const toDateTimeLocal = (dateStr) => {
                 if(!dateStr || dateStr === "0000-00-00 00:00:00") return "";
-                // Handle format YYYY-MM-DD saja atau YYYY-MM-DD HH:mm:ss
-                return dateStr.includes(" ") 
-                    ? dateStr.replace(" ", "T").substring(0, 16) 
-                    : `${dateStr}T17:00`;
+                return dateStr.includes(" ") ? dateStr.replace(" ", "T").substring(0, 16) : `${dateStr}T17:00`;
              };
 
              setForm({
                 ...defaultForm,
-                // Override routing fields dari Schedule data
                 vessel: initialData.vessel || "",
                 voyage: initialData.voyage || "",
                 txtETDJKT: initialData.etd_jkt || "",
@@ -86,13 +88,10 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                 dropdownPortdestination: initialData.destination_city || "",
                 dropdownPortTrans: initialData.trans_city || "",
                 txtClosingDoc: toDateTimeLocal(initialData.closing_date),
-                txtClosingCar: toDateTimeLocal(initialData.closing_date), // Asumsi sama dgn doc jika tidak ada
+                txtClosingCar: toDateTimeLocal(initialData.closing_date),
                 route_type_text: initialData.route_type || "DIRECT",
-                
-                // Set Region default agar dropdown city jalan (opsional)
                 region_id: "Jakarta" 
              });
-             // STOP disini, jangan fetch API detail
              return; 
           }
 
@@ -100,7 +99,6 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
           setLoadingDetail(true);
           try {
             const token = localStorage.getItem("gcl_access_token");
-            // Gunakan booking_code atau no_from_shipper dari initialData list
             const code = initialData.booking_code || initialData.no_from_shipper;
             const hbl = initialData.hbl;
             
@@ -110,16 +108,21 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
             const json = await res.json();
 
             if (json.status && json.booking) {
-              const b = json.booking; // Header
-              const d = json.detail;  // Detail
+              const b = json.booking;
+              const d = json.detail;
+
+              // --- LOGIKA PENGECEKAN READONLY DARI API ---
+              if (json.editable === "readonly") {
+                setIsReadOnly(true);
+              } else {
+                setIsReadOnly(false);
+              }
               
-              // Helper: Format DateTime MySQL (YYYY-MM-DD HH:mm:ss) ke Input DateTimeLocal (YYYY-MM-DDTHH:mm)
               const toDateTimeLocal = (dateStr) => {
                   if(!dateStr || dateStr === "0000-00-00 00:00:00") return "";
                   return dateStr.replace(" ", "T").substring(0, 16);
               };
 
-              // Mapping JSON Response ke State Form
               setForm({
                  ...defaultForm,
                  booking_number: b.booking_code,
@@ -128,8 +131,6 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                  textfieldIncoterm: b.incoterm,
                  textfieldFreight: b.freight,
                  BLtype: b.number_of_bl,
-                 
-                 // Routing
                  dropdownPortLoading: b.origin_city,
                  dropdownPortdestination: b.destination_city,
                  dropdownPortTrans: b.trans_city,
@@ -139,13 +140,9 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                  txtETA: b.eta,
                  txtClosingDoc: toDateTimeLocal(b.closing_date),
                  txtClosingCar: toDateTimeLocal(b.closing_cargo),
-                 
-                 // Ops
                  textfieldSI: b.si_number,
                  house_bl: b.house_bl,
                  warehouse: b.warehouse,
-                 
-                 // Parties
                  shipper: d.shipper_name,
                  textareaShipper: d.shipper_address,
                  contactshipper: d.cp_name,
@@ -154,8 +151,6 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                  textareaConsignee: d.consignee, 
                  notify: d.notify_name,
                  textareaNotify: d.notify, 
-                 
-                 // Goods
                  textQty: d.quantity,
                  textPackaging: d.package_type,
                  textweight: d.weight,
@@ -164,8 +159,6 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                  textareamarkingNos: d.marking, 
                  textareadesc: d.description_of_goods,
                  textareaDog: d.description_print, 
-                 
-                 // Region
                  cargoCategory: d.cargo_type || "GeneralCargo",
                  region_id: b.region_id
               });
@@ -178,6 +171,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
           }
         } else {
           // --- KASUS C: CREATE NEW (Blank) ---
+          setIsReadOnly(false); // New booking selalu editable
           setForm(defaultForm);
         }
       }
@@ -221,10 +215,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
   // --- 3. AUTO-FILL SHIPPER ---
   useEffect(() => {
     const fetchProfile = async () => {
-      // Jalankan jika: Modal Buka DAN (Tidak ada data awal ATAU Data awal dari Schedule)
-      // Ini agar saat klik 'Book' di schedule, data shipper tetap terisi otomatis.
       const shouldFetch = open && (!initialData || initialData.isFromSchedule);
-      
       if (!shouldFetch) return; 
 
       try {
@@ -272,6 +263,8 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
 
   const handleSearchSchedule = async (e) => {
     e.preventDefault();
+    if(isReadOnly) return; // Cegah search kalau readonly
+
     setLoadingSearch(true);
     try {
         const url = `https://gateway-cl.com/api/schedule?X-API-KEY=gateway-fms&city=${encodeURIComponent(form.city_identifier)}&etd=${form.etd_jkt_search}`;
@@ -347,8 +340,8 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
         <div style={{ ...styles.modalHeader, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", margin: 0, color: theme.textMain }}>
-              {/* Jika InitialData ada TAPI bukan dari Schedule, berarti Mode Edit/Detail */}
               {initialData && !initialData.isFromSchedule ? "Booking Details" : "Create New Booking"}
+              {isReadOnly && <span style={{fontSize: "0.8rem", marginLeft: "10px", color: theme.warning, border: `1px solid ${theme.warning}`, padding: "2px 8px", borderRadius: "4px"}}>READ ONLY</span>}
             </h2>
             <p style={{ margin: "4px 0 0", color: theme.textMuted }}>
               {initialData && !initialData.isFromSchedule ? `View/Edit booking ${form.booking_number}` : "Fill in the details below to create a new shipment."}
@@ -356,8 +349,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
           </div>
 
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            {/* Tombol Print Hanya Muncul Jika Mode Detail (bukan create new/from schedule) */}
-            {initialData && !initialData.isFromSchedule && !loadingDetail && (
+            {initialData && !initialData.isFromSchedule && !loadingDetail && !isReadOnly &&(
               <>
                 <button onClick={handlePrintBC} className="gcl-btn" style={{ backgroundColor: theme.success, color: "#fff", padding: "10px 16px", borderRadius: "8px", border: "none", cursor: 'pointer', display: "flex", alignItems: "center", gap: "6px" }}>
                   <FaFilePdf /> Booking Confirmation
@@ -389,7 +381,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "12px", alignItems: "end" }}>
                             <div>
                                 <label style={styles.inputLabel}>Region</label>
-                                <select name="region_id" value={form.region_id} onChange={handleChange} style={styles.inputField}>
+                                <select name="region_id" value={form.region_id} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                     <option value="">Select Region</option>
                                     <option value="Jakarta">Jakarta</option>
                                     <option value="Surabaya">Surabaya</option>
@@ -399,19 +391,19 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                             </div>
                             <div>
                                 <label style={styles.inputLabel}>Destination</label>
-                                <select name="city_identifier" value={form.city_identifier} onChange={handleChange} style={styles.inputField} disabled={!form.region_id}>
+                                <select name="city_identifier" value={form.city_identifier} onChange={handleChange} style={getInputStyle()} disabled={!form.region_id || isReadOnly}>
                                     <option value="">Select City</option>
                                     {cityOptions.map((city, i) => <option key={i} value={city}>{city}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label style={styles.inputLabel}>ETD</label>
-                                <select name="etd_jkt_search" value={form.etd_jkt_search} onChange={handleChange} style={styles.inputField}>
+                                <select name="etd_jkt_search" value={form.etd_jkt_search} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                     <option value="">Select ETD</option>
                                     {etdOptions.map((etd, i) => <option key={i} value={etd}>{etd}</option>)}
                                 </select>
                             </div>
-                            <button type="button" onClick={handleSearchSchedule} className="gcl-btn" style={{ height: "46px", padding: "0 24px", backgroundColor: theme.primary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }} disabled={loadingSearch}>
+                            <button type="button" onClick={handleSearchSchedule} className="gcl-btn" style={{ height: "46px", padding: "0 24px", backgroundColor: isReadOnly ? theme.border : theme.primary, color: '#fff', border: 'none', borderRadius: '8px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }} disabled={loadingSearch || isReadOnly}>
                                 <FaSearch />
                             </button>
                         </div>
@@ -424,33 +416,33 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                              <div style={{ gridColumn: "span 2" }}>
                                 <label style={styles.inputLabel}>Vessel / Voyage</label>
                                 <div style={{ display: "flex", gap: "8px" }}>
-                                    <input name="vessel" value={form.vessel} onChange={handleChange} style={styles.inputField} placeholder="Vessel" />
-                                    <input name="voyage" value={form.voyage} onChange={handleChange} style={{...styles.inputField, width: "40%"}} placeholder="Voy" />
+                                    <input name="vessel" value={form.vessel} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} placeholder="Vessel" />
+                                    <input name="voyage" value={form.voyage} onChange={handleChange} style={{...getInputStyle(), width: "40%"}} readOnly={isReadOnly} placeholder="Voy" />
                                 </div>
                             </div>
                             <div>
                                 <label style={styles.inputLabel}>ETD Pol</label>
-                                <input type="date" name="txtETDJKT" value={form.txtETDJKT} onChange={handleChange} style={styles.inputField} />
+                                <input type="date" name="txtETDJKT" value={form.txtETDJKT} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                             </div>
                             <div>
                                 <label style={styles.inputLabel}>ETA Pod</label>
-                                <input type="date" name="txtETA" value={form.txtETA} onChange={handleChange} style={styles.inputField} />
+                                <input type="date" name="txtETA" value={form.txtETA} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                             </div>
                             <div>
                                  <label style={styles.inputLabel}>Port of Loading</label>
-                                 <input name="dropdownPortLoading" value={form.dropdownPortLoading} onChange={handleChange} style={styles.inputField} />
+                                 <input name="dropdownPortLoading" value={form.dropdownPortLoading} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                             </div>
                             <div>
                                  <label style={styles.inputLabel}>Transhipment</label>
-                                 <input name="dropdownPortTrans" value={form.dropdownPortTrans} onChange={handleChange} style={styles.inputField} />
+                                 <input name="dropdownPortTrans" value={form.dropdownPortTrans} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                             </div>
                             <div>
                                  <label style={styles.inputLabel}>Destination</label>
-                                 <input name="dropdownPortdestination" value={form.dropdownPortdestination} onChange={handleChange} style={styles.inputField} />
+                                 <input name="dropdownPortdestination" value={form.dropdownPortdestination} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                             </div>
                              <div>
                                 <label style={styles.inputLabel}>Closing Doc</label>
-                                <input type="datetime-local" name="txtClosingDoc" value={form.txtClosingDoc} onChange={handleChange} style={styles.inputField} />
+                                <input type="datetime-local" name="txtClosingDoc" value={form.txtClosingDoc} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                             </div>
                         </div>
                     </div>
@@ -470,42 +462,41 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Type / Movement</label>
                                     <div style={{display: 'flex', gap: '8px'}}>
-                                        <select name="TypeTransaction" value={form.TypeTransaction} onChange={handleChange} style={styles.inputField}>
+                                        <select name="TypeTransaction" value={form.TypeTransaction} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                             <option value="LCL">LCL</option><option value="FCL">FCL</option>
                                         </select>
-                                        <select name="textMovementtype" value={form.textMovementtype} onChange={handleChange} style={styles.inputField}>
+                                        <select name="textMovementtype" value={form.textMovementtype} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                             <option value="CFS/CFS">CFS/CFS</option><option value="CY/CY">CY/CY</option><option value="Port to Port">Port to Port</option>
                                         </select>
                                     </div>
                                 </div>
-                                {/* HBL hanya muncul jika Mode Edit (ada data) DAN bukan dari schedule */}
                                 {initialData && !initialData.isFromSchedule && !loadingDetail && (
                                     <div style={styles.formGroup}>
                                         <label style={styles.inputLabel}>HBL Number</label>
-                                        <input name="house_bl" value={form.house_bl} onChange={handleChange} style={styles.inputField} readOnly/>
+                                        <input name="house_bl" value={form.house_bl} onChange={handleChange} style={getInputStyle()} readOnly />
                                     </div>
                                 )}
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>SI Number</label>
-                                    <input name="textfieldSI" value={form.textfieldSI} onChange={handleChange} style={styles.inputField} />
+                                    <input name="textfieldSI" value={form.textfieldSI} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly} />
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Terms & Freight</label>
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-                                        <select name="textfieldFreight" value={form.textfieldFreight} onChange={handleChange} style={styles.inputField}>
+                                        <select name="textfieldFreight" value={form.textfieldFreight} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                             <option value="PREPAID">PREPAID</option><option value="COLLECT">COLLECT</option>
                                         </select>
-                                        <select name="textfieldIncoterm" value={form.textfieldIncoterm} onChange={handleChange} style={styles.inputField}>
+                                        <select name="textfieldIncoterm" value={form.textfieldIncoterm} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                             <option value="EXW">EXW</option><option value="FOB">FOB</option><option value="CIF">CIF</option><option value="CNF">CNF</option>
                                         </select>
-                                        <select name="BLtype" value={form.BLtype} onChange={handleChange} style={styles.inputField}>
+                                        <select name="BLtype" value={form.BLtype} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                             <option value="3 ORIGINAL">3 ORG</option><option value="EXPRESS RELEASE">TELEX</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Cargo Category</label>
-                                    <select name="cargoCategory" value={form.cargoCategory} onChange={handleChange} style={styles.inputField}>
+                                    <select name="cargoCategory" value={form.cargoCategory} onChange={handleChange} style={getInputStyle()} disabled={isReadOnly}>
                                     <option value="GeneralCargo">General Cargo</option>
                                     <option value="DangerousGoods">Dangerous Goods (DG)</option>
                                     </select>
@@ -519,16 +510,16 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                                 <h4 style={styles.sectionTitle}><FaMapMarkerAlt /> Parties</h4>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Shipper</label>
-                                    <input name="shipper" value={form.shipper} onChange={handleChange} style={{ ...styles.inputField, marginBottom: 5 }} placeholder="Name" />
-                                    <textarea name="textareaShipper" value={form.textareaShipper} onChange={handleChange} rows={5} style={styles.inputField} placeholder="Address" />
+                                    <input name="shipper" value={form.shipper} onChange={handleChange} style={{ ...getInputStyle(), marginBottom: 5 }} readOnly={isReadOnly} placeholder="Name" />
+                                    <textarea name="textareaShipper" value={form.textareaShipper} onChange={handleChange} rows={5} style={getInputStyle()} readOnly={isReadOnly} placeholder="Address" />
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Consignee</label>
-                                    <textarea name="textareaConsignee" value={form.textareaConsignee} onChange={handleChange} rows={5} style={styles.inputField} placeholder="Name & Address" />
+                                    <textarea name="textareaConsignee" value={form.textareaConsignee} onChange={handleChange} rows={5} style={getInputStyle()} readOnly={isReadOnly} placeholder="Name & Address" />
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Notify Party</label>
-                                    <textarea name="textareaNotify" value={form.textareaNotify} onChange={handleChange} rows={2} style={styles.inputField} placeholder="Name & Address" />
+                                    <textarea name="textareaNotify" value={form.textareaNotify} onChange={handleChange} rows={2} style={getInputStyle()} readOnly={isReadOnly} placeholder="Name & Address" />
                                 </div>
                              </div>
                         </div>
@@ -539,24 +530,24 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
                                 <h4 style={styles.sectionTitle}><FaSave /> Goods Details</h4>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Marks & Numbers</label>
-                                    <textarea name="textareamarkingNos" value={form.textareamarkingNos} onChange={handleChange} rows={2} style={styles.inputField} />
+                                    <textarea name="textareamarkingNos" value={form.textareamarkingNos} onChange={handleChange} rows={2} style={getInputStyle()} readOnly={isReadOnly} />
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Description</label>
-                                    <textarea name="textareadesc" value={form.textareadesc} onChange={handleChange} rows={3} style={styles.inputField} />
+                                    <textarea name="textareadesc" value={form.textareadesc} onChange={handleChange} rows={3} style={getInputStyle()} readOnly={isReadOnly} />
                                 </div>
                                 <div style={{display:'flex', gap:10, marginBottom:16}}>
-                                    <div style={{flex:1}}><label style={styles.inputLabel}>Qty</label><input name="textQty" value={form.textQty} onChange={handleChange} style={styles.inputField}/></div>
-                                    <div style={{flex:2}}><label style={styles.inputLabel}>Pkg</label><input name="textPackaging" value={form.textPackaging} onChange={handleChange} style={styles.inputField}/></div>
+                                    <div style={{flex:1}}><label style={styles.inputLabel}>Qty</label><input name="textQty" value={form.textQty} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly}/></div>
+                                    <div style={{flex:2}}><label style={styles.inputLabel}>Pkg</label><input name="textPackaging" value={form.textPackaging} onChange={handleChange} style={getInputStyle()} readOnly={isReadOnly}/></div>
                                 </div>
                                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:16}}>
-                                     <div style={{flex:1}}><label style={styles.inputLabel}>Gross Weight</label><input name="textweight" value={form.textweight} onChange={handleChange} placeholder="GW" style={styles.inputField} /></div>
-                                     <div style={{flex:1}}><label style={styles.inputLabel}>Nett Weight</label><input name="textnetto" value={form.textnetto} onChange={handleChange} placeholder="NW" style={styles.inputField} /></div>
-                                     <div style={{flex:1}}><label style={styles.inputLabel}>Volume</label><input name="textmeas" value={form.textmeas} onChange={handleChange} placeholder="M3" style={styles.inputField} /></div>
+                                     <div style={{flex:1}}><label style={styles.inputLabel}>Gross Weight</label><input name="textweight" value={form.textweight} onChange={handleChange} placeholder="GW" style={getInputStyle()} readOnly={isReadOnly} /></div>
+                                     <div style={{flex:1}}><label style={styles.inputLabel}>Nett Weight</label><input name="textnetto" value={form.textnetto} onChange={handleChange} placeholder="NW" style={getInputStyle()} readOnly={isReadOnly} /></div>
+                                     <div style={{flex:1}}><label style={styles.inputLabel}>Volume</label><input name="textmeas" value={form.textmeas} onChange={handleChange} placeholder="M3" style={getInputStyle()} readOnly={isReadOnly} /></div>
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.inputLabel}>Commodity (HS Code)</label>
-                                    <textarea name="textareaDog" value={form.textareaDog} onChange={handleChange} rows={1} style={styles.inputField} />
+                                    <textarea name="textareaDog" value={form.textareaDog} onChange={handleChange} rows={1} style={getInputStyle()} readOnly={isReadOnly} />
                                 </div>
                              </div>
                         </div>
@@ -570,10 +561,12 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
         <div style={styles.modalFooter}>
           <button type="button" onClick={onClose} className="gcl-btn" style={{ backgroundColor: "transparent", color: theme.textMuted, border: "none", cursor: 'pointer' }}>Close</button>
           
-          <button type="submit" form="new-booking-form" className="gcl-btn" style={{ backgroundColor: theme.primary, color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: 'pointer', display: "flex", alignItems: "center", gap: "8px" }}>
-            {/* Ubah text tombol berdasarkan kondisi */}
-            <FaSave /> {initialData && !initialData.isFromSchedule ? "Update Booking" : "Save Booking"}
-          </button>
+          {/* HANYA TAMPILKAN TOMBOL SAVE JIKA TIDAK READONLY */}
+          {!isReadOnly && (
+            <button type="submit" form="new-booking-form" className="gcl-btn" style={{ backgroundColor: theme.primary, color: "#fff", padding: "10px 24px", borderRadius: "8px", border: "none", cursor: 'pointer', display: "flex", alignItems: "center", gap: "8px" }}>
+                <FaSave /> {initialData && !initialData.isFromSchedule ? "Update Booking" : "Save Booking"}
+            </button>
+          )}
         </div>
       </div>
     </div>

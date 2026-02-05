@@ -91,13 +91,13 @@ const handleSubmit = async (e) => {
           <div className="gcl-auth-logo">
             <span className="gcl-logo-mark">G</span>
             <div className="gcl-logo-text">
-              <span className="gcl-logo-main">Gateway</span>
-              <span className="gcl-logo-sub">Container Line</span>
+              <span className="gcl-logo-main">WELCOME BACK</span>
+              <span className="gcl-logo-sub"></span>
             </div>
           </div>
 
           <h1 className="gcl-auth-title">Sign In</h1>
-          <p className="gcl-auth-subtitle">Customer Portal • Gateway Group</p>
+          <p className="gcl-auth-subtitle">Customer Portal</p>
 
           {error && <div className="gcl-auth-alert error">{error}</div>}
 
@@ -133,7 +133,7 @@ const handleSubmit = async (e) => {
             </button>
 
             <div className="gcl-auth-footer">
-              <span>© {new Date().getFullYear()} Gateway Group</span>
+              <span>© {new Date().getFullYear()} Gateway Container Line</span>
             </div>
           </form>
         </div>
