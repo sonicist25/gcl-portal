@@ -114,7 +114,7 @@ export default function QuotationList() {
           {loading && (
             <div className="gcl-state-empty">
               <div className="spinner"></div>
-              <p>Syncing data from ERP...</p>
+              <p>Syncing data from Gateway CRM ...</p>
             </div>
           )}
 

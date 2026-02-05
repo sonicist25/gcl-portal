@@ -157,7 +157,7 @@ function ChangeView({ center }) {
   return null;
 }
 
-function GocometTracking({ defaultSiNumber = "JESMZJ-GCL2517855" }) {
+function GocometTracking({ defaultSiNumber = "" }) {
   // 1. GUNAKAN useSearchParams (Cara React Router)
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSi = searchParams.get("si_number");
