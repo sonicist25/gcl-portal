@@ -6,106 +6,168 @@ const API_KEY  = "gateway-fms";
 let isRefreshing = false;
 let refreshPromise = null;
 
-/**
- * Simpan token ke localStorage
- */
+/** =========================
+ *  Token helpers
+ *  ========================= */
 function saveTokens(data) {
   if (!data) return;
-  if (data.access_token) {
-    localStorage.setItem("gcl_access_token", data.access_token);
-  }
-  if (data.refresh_token) {
-    localStorage.setItem("gcl_refresh_token", data.refresh_token);
-  }
-  if (data.expires_at) {
-    localStorage.setItem("gcl_token_expires", data.expires_at);
-  }
+
+  if (data.access_token) localStorage.setItem("gcl_access_token", data.access_token);
+  if (data.refresh_token) localStorage.setItem("gcl_refresh_token", data.refresh_token);
+
+  // opsional (kalau backend kirim expires_at)
+  if (data.expires_at) localStorage.setItem("gcl_token_expires", data.expires_at);
 }
 
-/**
- * Panggil endpoint refresh token SATU kali
- */
+function clearAuthStorage() {
+  localStorage.removeItem("gcl_access_token");
+  localStorage.removeItem("gcl_refresh_token");
+  localStorage.removeItem("gcl_token_expires");
+  localStorage.removeItem("gcl_user");
+}
+
+function getAccessToken() {
+  return localStorage.getItem("gcl_access_token");
+}
+
+function getRefreshToken() {
+  return localStorage.getItem("gcl_refresh_token");
+}
+
+/** =========================
+ *  Detect expired token
+ *  ========================= */
+function isTokenExpiredResponse(res, json) {
+  if (res.status === 401) return true;
+
+  const msg = (json?.message || json?.error || "").toString().toLowerCase();
+  // sesuaikan jika backend kamu pakai string lain
+  return (
+    msg.includes("expired token") ||
+    msg.includes("token expired") ||
+    msg.includes("jwt expired") ||
+    msg.includes("token has expired")
+  );
+}
+
+/** =========================
+ *  Refresh token (single flight)
+ *  ========================= */
 async function refreshAccessToken() {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise; // reuse request yang sudah jalan
-  }
+  if (isRefreshing && refreshPromise) return refreshPromise;
 
-  const refreshToken = localStorage.getItem("gcl_refresh_token");
-  if (!refreshToken) {
-    throw new Error("Refresh token tidak ada, silakan login ulang.");
-  }
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) throw new Error("NO_REFRESH_TOKEN");
 
-  isRefreshing   = true;
+  isRefreshing = true;
+
   refreshPromise = (async () => {
     const res = await fetch(`${API_BASE}/customer_login/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
         "X-API-KEY": API_KEY,
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
-    if (!res.ok) {
-      throw new Error("Gagal refresh token");
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok || json?.status === false) {
+      throw new Error(json?.message || json?.error || "REFRESH_FAILED");
     }
 
-    const json = await res.json();
-    if (!json.status) {
-      throw new Error(json.message || json.error || "Refresh token gagal");
-    }
-
+    // asumsi struktur: { status:true, data:{access_token, refresh_token?, expires_at?} }
     saveTokens(json.data);
+
+    if (!json?.data?.access_token) throw new Error("REFRESH_NO_ACCESS_TOKEN");
+
     return json.data.access_token;
   })();
 
   try {
-    const newToken = await refreshPromise;
-    return newToken;
+    return await refreshPromise;
   } finally {
     isRefreshing = false;
     refreshPromise = null;
   }
 }
 
-/**
- * Wrapper fetch dengan auto-refresh token
+/** =========================
+ *  Logout handler
+ *  ========================= */
+function forceLoginRedirect() {
+  clearAuthStorage();
+  // kalau pakai react-router, lebih ideal navigate, tapi ini versi global:
+  window.location.href = "/login";
+}
+
+/** =========================
+ *  Wrapper fetch with auto refresh
+ *  =========================
+ *  Notes:
+ *  - Retry hanya aman jika body bisa dikirim ulang.
+ *  - Untuk FormData biasanya aman, tapi untuk stream/Request body tertentu bisa tidak.
  */
-export async function apiFetch(url, options = {}) {
-  const token  = localStorage.getItem("gcl_access_token");
+export async function apiFetch(endpointOrUrl, options = {}) {
+  const url = endpointOrUrl.startsWith("http")
+    ? endpointOrUrl
+    : `${API_BASE}${endpointOrUrl.startsWith("/") ? "" : "/"}${endpointOrUrl}`;
+
+  const token = getAccessToken();
+
   const headers = {
+    Accept: "application/json",
     "X-API-KEY": API_KEY,
     ...(options.headers || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
+  // request pertama
   let res = await fetch(url, { ...options, headers });
 
-  // kalau token sudah expired → server biasanya balas 401
-  if (res.status === 401) {
-    try {
-      const newToken = await refreshAccessToken();
+  // parse JSON kalau ada
+  let json = null;
+  try { json = await res.clone().json(); } catch (_) {}
 
-      const retryHeaders = {
-        "X-API-KEY": API_KEY,
-        ...(options.headers || {}),
-        Authorization: `Bearer ${newToken}`,
-      };
-
-      // Ulangi request sekali lagi pakai token baru
-      res = await fetch(url, { ...options, headers: retryHeaders });
-    } catch (err) {
-      // refresh gagal → paksa logout
-      localStorage.removeItem("gcl_access_token");
-      localStorage.removeItem("gcl_refresh_token");
-      localStorage.removeItem("gcl_token_expires");
-      localStorage.removeItem("gcl_user");
-
-      window.location.href = "/login";
-      throw err;
-    }
+  // kalau tidak expired → return normal
+  if (!isTokenExpiredResponse(res, json)) {
+    // kalau server return non-json, fallback text
+    if (json !== null) return json;
+    const text = await res.text().catch(() => "");
+    return { status: res.ok, message: text, http_status: res.status };
   }
 
-  const json = await res.json();
-  return json;
+  // expired → coba refresh → retry sekali
+  try {
+    const newToken = await refreshAccessToken();
+
+    const retryHeaders = {
+      Accept: "application/json",
+      "X-API-KEY": API_KEY,
+      ...(options.headers || {}),
+      Authorization: `Bearer ${newToken}`,
+    };
+
+    res = await fetch(url, { ...options, headers: retryHeaders });
+
+    // parse retry json
+    const retryJson = await res.json().catch(() => null);
+
+    // kalau masih 401/expired setelah refresh → paksa login
+    if (retryJson && isTokenExpiredResponse(res, retryJson)) {
+      forceLoginRedirect();
+      throw new Error("SESSION_EXPIRED");
+    }
+
+    if (retryJson !== null) return retryJson;
+
+    const text = await res.text().catch(() => "");
+    return { status: res.ok, message: text, http_status: res.status };
+  } catch (err) {
+    // refresh gagal → paksa logout
+    forceLoginRedirect();
+    throw err;
+  }
 }

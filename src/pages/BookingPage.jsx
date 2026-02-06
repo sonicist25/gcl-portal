@@ -6,6 +6,7 @@ import GclLayout from "../layouts/GclLayout";
 import "../styles/new_booking.css";
 import Swal from "sweetalert2";
 import NewBookingModal from "./NewBookingModal";
+import { apiFetch } from "../utils/authApi";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
 
@@ -202,7 +203,7 @@ function BookingList() {
         const token = localStorage.getItem("gcl_access_token");
         if (!token) throw new Error("Token tidak ditemukan, silakan login ulang.");
 
-        const res = await fetch(`${API_BASE}/api/booking_list`, {
+        const res = await apiFetch(`${API_BASE}/api/booking_list`, {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -286,7 +287,7 @@ function BookingList() {
       if (!formData.origin_country) payload.append("origin_country", "INDONESIA");
 
       // 3. Hit API
-      const response = await fetch("https://gateway-cl.com/api/instant_booking", {
+      const response = await apiFetch("https://gateway-cl.com/api/instant_booking", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
