@@ -200,7 +200,6 @@ const fetchBookings = async () => {
     setLoading(true);
     setError("");
 
-    // apiFetch return JSON langsung (bukan Response)
     const json = await apiFetch("/booking_list");
 
     if (!json?.status) {
@@ -211,8 +210,8 @@ const fetchBookings = async () => {
     const lastBookings = Array.isArray(json.data?.last_bookings) ? json.data.last_bookings : [];
 
     const combined = [
-      ...bookings.map((b) => ({ ...b, _group: "Booking" })),
-      ...lastBookings.map((b) => ({ ...b, _group: "Last Booking" })),
+      ...(bookings.length ? bookings.map((b) => ({ ...b, _group: "Booking" })) : []),
+      ...(lastBookings.length ? lastBookings.map((b) => ({ ...b, _group: "Last Booking" })) : []),
     ];
 
     setRows(combined);
@@ -227,6 +226,7 @@ const fetchBookings = async () => {
 useEffect(() => {
   fetchBookings();
 }, []);
+
 
   // HANDLE CREATE NEW
   const handleNewBooking = () => {
