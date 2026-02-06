@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaPlus, FaInfoCircle, FaTimes, FaSearch, FaSave, FaShip, FaMapMarkerAlt, FaFilePdf, FaPrint } from "react-icons/fa";
 import Swal from "sweetalert2";
+import { apiFetch } from "../utils/authApi";
 
 // --- THEME CONFIGURATION (DARK MODE) ---
 const theme = {
@@ -36,7 +37,8 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
   const [isReadOnly, setIsReadOnly] = useState(false); 
 
   const now = new Date();
-  const defaultBookingNo = `GTW-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+  const defaultBookingNo = `GTW-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}${String(now.getSeconds()).padStart(2,"0")}`;
+
 
   // Default State
   const defaultForm = {
@@ -102,14 +104,12 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
           // --- KASUS B: EDIT BOOKING EXISTING (Fetch API) ---
           setLoadingDetail(true);
           try {
-            const token = localStorage.getItem("gcl_access_token");
             const code = initialData.booking_code || initialData.no_from_shipper;
-            const hbl = initialData.hbl;
-            
-            const res = await fetch(`https://gateway-cl.com/api/instant_booking?booking_code=${code}&hbl=${hbl}`, {
-               headers: { "Authorization": `Bearer ${token}`, "X-API-KEY": "gateway-fms" }
+            const hbl  = initialData.hbl;
+
+            const json = await apiFetch(`/instant_booking?booking_code=${encodeURIComponent(code)}&hbl=${encodeURIComponent(hbl)}`, {
+              method: "GET",
             });
-            const json = await res.json();
 
             if (json.status && json.booking) {
               const b = json.booking;

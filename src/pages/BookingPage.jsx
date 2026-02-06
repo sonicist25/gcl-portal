@@ -104,6 +104,18 @@ const styles = {
   }
 };
 
+async function ensureAuth() {
+  // “ping” endpoint yg require JWT
+  const json = await apiFetch("/Customer_login/profile", { method: "GET" });
+
+  // kalau backend kamu pakai {status:false} juga handle
+  if (json?.status === false) {
+    throw new Error(json?.message || "SESSION_INVALID");
+  }
+
+  return true;
+}
+
 function getTrackingStatusMeta(rawStatus) {
   const s = (rawStatus || "").trim();
   if (!s) {
@@ -229,16 +241,34 @@ useEffect(() => {
 
 
   // HANDLE CREATE NEW
-  const handleNewBooking = () => {
-    setSelectedBooking(null); // Pastikan null
+const handleNewBooking = async () => {
+  try {
+    await ensureAuth();               // cek/refresh JWT dulu
+    setSelectedBooking(null);
     setShowNewBooking(true);
-  };
+  } catch (err) {
+    console.error(err);
 
-  // HANDLE DETAIL (KLIK TOMBOL DETAIL DI TABLE)
-  const handleDetail = (row) => {
-    setSelectedBooking(row); // Set data row yang diklik
+    // kalau apiFetch sudah redirect /login, cukup stop
+    if (String(err?.message || "").includes("SESSION_EXPIRED")) return;
+
+    Swal.fire("Session", err?.message || "Session expired, please login again.", "warning");
+  }
+};
+
+// HANDLE DETAIL
+const handleDetail = async (row) => {
+  try {
+    await ensureAuth();               // cek/refresh JWT dulu
+    setSelectedBooking(row);
     setShowNewBooking(true);
-  };
+  } catch (err) {
+    console.error(err);
+    if (String(err?.message || "").includes("SESSION_EXPIRED")) return;
+    Swal.fire("Session", err?.message || "Session expired, please login again.", "warning");
+  }
+};
+
 
   // --- HANDLE SUBMIT KE API INSTANT BOOKING (UPDATED) ---
   const handleSubmitNewBooking = async (formData) => {
