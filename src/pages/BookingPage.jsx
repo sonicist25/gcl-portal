@@ -194,50 +194,39 @@ function BookingList() {
     return val;
   };
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  // taruh DI DALAM component BookingList(), tapi DI LUAR useEffect
+const fetchBookings = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-        const token = localStorage.getItem("gcl_access_token");
-        if (!token) throw new Error("Token tidak ditemukan, silakan login ulang.");
+    // apiFetch return JSON langsung (bukan Response)
+    const json = await apiFetch("/booking_list");
 
-        const res = await apiFetch(`${API_BASE}/api/booking_list`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-            "X-API-KEY": "gateway-fms",
-          },
-        });
+    if (!json?.status) {
+      throw new Error(json?.message || "Gagal mengambil data booking.");
+    }
 
-        const json = await res.json();
-        if (!res.ok || !json.status)
-          throw new Error(json.message || "Gagal mengambil data booking.");
+    const bookings = Array.isArray(json.data?.bookings) ? json.data.bookings : [];
+    const lastBookings = Array.isArray(json.data?.last_bookings) ? json.data.last_bookings : [];
 
-        const bookings = Array.isArray(json.data?.bookings)
-          ? json.data.bookings
-          : [];
-        const lastBookings = Array.isArray(json.data?.last_bookings)
-          ? json.data.last_bookings
-          : [];
+    const combined = [
+      ...bookings.map((b) => ({ ...b, _group: "Booking" })),
+      ...lastBookings.map((b) => ({ ...b, _group: "Last Booking" })),
+    ];
 
-        const combined = [
-          ...bookings.map((b) => ({ ...b, _group: "Booking" })),
-          ...lastBookings.map((b) => ({ ...b, _group: "Last Booking" })),
-        ];
-        setRows(combined);
-      } catch (err) {
-        console.error(err);
-        setError(err.message || "Terjadi kesalahan tidak diketahui.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setRows(combined);
+  } catch (err) {
+    console.error(err);
+    setError(err.message || "Terjadi kesalahan tidak diketahui.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-    fetchBookings();
-  }, []);
+useEffect(() => {
+  fetchBookings();
+}, []);
 
   // HANDLE CREATE NEW
   const handleNewBooking = () => {
@@ -287,28 +276,15 @@ function BookingList() {
       if (!formData.origin_country) payload.append("origin_country", "INDONESIA");
 
       // 3. Hit API
-      const response = await apiFetch("https://gateway-cl.com/api/instant_booking", {
+     const json = await apiFetch("/instant_booking", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Authorization": `Bearer ${token}`,
-          "X-API-KEY": "gateway-fms",
-        },
-        body: payload
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: payload,
       });
 
-      const json = await response.json();
-
-      // 4. Cek Response dari Backend
-      // Backend CI Anda mengembalikan { error: false, status: 201 } jika sukses
-      // Atau { error: true/1 } jika gagal
-      
-      if (!response.ok) {
-        throw new Error(json.message || `Server Error: ${response.status}`);
-      }
-
-      if (json.error || (json.status && json.status !== 201)) {
-        throw new Error(json.message || "Failed to save booking (Backend Error).");
+      // backend kamu: sukses biasanya { error:false, status:201 }
+      if (json?.error || (json?.status && Number(json.status) !== 201)) {
+        throw new Error(json?.message || "Failed to save booking (Backend Error).");
       }
 
       // 5. Sukses
@@ -323,7 +299,7 @@ function BookingList() {
 
       // Tutup modal & Refresh table
       setShowNewBooking(false);
-      fetchBookings();
+      await fetchBookings();
 
     } catch (error) {
       console.error("Submit Error:", error);
