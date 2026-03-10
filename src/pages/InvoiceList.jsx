@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import GclLayout from "../layouts/GclLayout";
 import Swal from "sweetalert2";
 import { FaInfoCircle, FaFileInvoiceDollar, FaFileAlt, FaTimes, FaSpinner } from "react-icons/fa";
+import { apiFetch } from "../utils/authApi";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
 
@@ -75,21 +76,16 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
     const invoiceNo = invoice.invoice_number || "";
     const url = `${API_BASE}/api/faktur_pajak?invoice_no=${encodeURIComponent(invoiceNo)}&X-API-KEY=gateway-fms`;
 
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`
-      }
+    const responseData = await apiFetch(url, {
+      method: "GET"
     });
 
-    const json = await res.json();
-
-    if (!res.ok || !json.status) {
-      throw new Error(json.message || "Gagal mengambil data Faktur Pajak dari server.");
+    // responseData sudah berupa JSON, jadi kita langsung cek isinya
+    if (!responseData || !responseData.status) {
+      throw new Error(responseData.message || "Gagal mengambil data Faktur Pajak dari server.");
     }
 
-    const fakturDownloadUrl = json.data?.file_url;
+    const fakturDownloadUrl = responseData.data?.file_url;
 
     if (fakturDownloadUrl) {
       window.open(fakturDownloadUrl, "_blank", "noopener,noreferrer");
@@ -279,38 +275,31 @@ function InvoiceList() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchInvoices = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const token = localStorage.getItem("gcl_access_token");
-        if (!token) {
-          throw new Error("Token tidak ditemukan, silakan login ulang.");
-        }
-
-        const url = `${API_BASE}/api/invoice_api?X-API-KEY=gateway-fms`;
-
-        const res = await fetch(url, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`, 
-          },
+        // 1. Langsung panggil apiFetch, tidak perlu cek token manual atau API_BASE
+        // (X-API-KEY juga sudah otomatis dikirim lewat header di dalam apiFetch)
+        const responseData = await apiFetch("/invoice_api", {
+          method: "GET"
         });
 
-        const json = await res.json();
-        console.log("Invoice API response:", json);
+        console.log("Invoice API response:", responseData);
 
-        if (!res.ok || !json.status) {
+        // 2. Karena responseData sudah berupa JSON, kita tinggal cek isinya
+        if (!responseData.status) {
           throw new Error(
-            json.message || json.data?.message || "Gagal mengambil data invoice."
+            responseData.message || responseData.data?.message || "Gagal mengambil data invoice."
           );
         }
 
-        const list = Array.isArray(json.data?.data) ? json.data.data : [];
+        // 3. Ambil array datanya
+        const list = Array.isArray(responseData.data?.data) ? responseData.data.data : [];
         setRows(list);
+
       } catch (err) {
         console.error(err);
         setError(err.message || "Terjadi kesalahan tidak diketahui.");

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import GclLayout from "../layouts/GclLayout";
+import { apiFetch } from "../utils/authApi";
 
 // Helper: Format Date (International Standard: 05 Feb 2026)
 function formatDate(dateStr) {
@@ -35,10 +36,9 @@ export default function QuotationList() {
            return;
         }
 
-        const res = await fetch(`https://gateway-cl.com/api/api_quotation/list`, {
+        const res = await apiFetch("/api_quotation/list", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           }
         });

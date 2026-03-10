@@ -223,25 +223,29 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
       const shouldFetch = open && (!initialData || initialData.isFromSchedule);
       if (!shouldFetch) return; 
 
-      try {
-        const token = localStorage.getItem("gcl_access_token"); 
-        if (!token) return;
-        const res = await fetch("https://gateway-cl.com/api/Customer_login/profile", {
-          headers: { "Authorization": `Bearer ${token}`, "X-API-KEY": "gateway-fms" }
-        });
-        const json = await res.json();
-        const data = json.data || json;
-        if (data && data.shipper_detail) {
-          const det = data.shipper_detail;
-          setForm(prev => ({
-            ...prev,
-            shipper: det.shipper_name || "",
-            textareaShipper: det.shipper_address || "",
-            contactshipper: det.cp_name || "",
-            contactemail: det.cp_email || ""
-          }));
-        }
-      } catch (error) {}
+     try {
+      // 1. Cukup panggil endpoint-nya saja, apiFetch yang urus token, header, & URL
+      const json = await apiFetch("/Customer_login/profile", {
+        method: "GET" // Default fetch adalah GET, tapi ditulis agar lebih jelas
+      });
+
+      // 2. apiFetch langsung me-return hasil JSON-nya, tidak perlu res.json() lagi
+      const data = json.data || json;
+
+      if (data && data.shipper_detail) {
+        const det = data.shipper_detail;
+        setForm(prev => ({
+          ...prev,
+          shipper: det.shipper_name || "",
+          textareaShipper: det.shipper_address || "",
+          contactshipper: det.cp_name || "",
+          contactemail: det.cp_email || ""
+        }));
+      }
+    } catch (error) {
+      // Kalau token expired dan gagal refresh, error akan masuk ke sini
+      console.error("Gagal mengambil data profile:", error);
+    }
     };
     fetchProfile();
   }, [open, initialData]);

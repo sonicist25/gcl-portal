@@ -5,6 +5,7 @@ import L from "leaflet";
 import GclLayout from "../layouts/GclLayout";
 import "leaflet/dist/leaflet.css";
 import "../styles/gocometTracking.css";
+import { apiFetch } from "../utils/authApi";
 
 // --- KONFIGURASI ICON LEAFLET ---
 delete L.Icon.Default.prototype._getIconUrl;

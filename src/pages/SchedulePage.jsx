@@ -4,6 +4,7 @@ import Swal from "sweetalert2"; // Import SweetAlert
 import GclLayout from "../layouts/GclLayout";
 import NewBookingModal from "./NewBookingModal";
 import "../styles/schedule.css";
+import { apiFetch } from "../utils/authApi";
 
 const API_BASE =
   import.meta?.env?.VITE_GCL_API_BASE_URL || "https://gateway-cl.com/api";
@@ -167,12 +168,10 @@ export default function SchedulePage() {
         if (!formData.origin_country) payload.append("origin_country", "INDONESIA");
 
         // 3. Hit API
-        const response = await fetch(`${API_BASE}/instant_booking`, {
+        const response = await apiFetch("/instant_booking", {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": `Bearer ${token}`,
-                "X-API-KEY": "gateway-fms",
             },
             body: payload
         });
