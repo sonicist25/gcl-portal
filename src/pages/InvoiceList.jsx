@@ -346,7 +346,7 @@ useEffect(() => {
           className="gcl-card"
           style={{
             marginTop: "20px",
-            height: "calc(100vh - 160px)",
+            height: "calc(99vh - 80px)",
             display: "flex",
             flexDirection: "column",
           }}
@@ -417,7 +417,9 @@ useEffect(() => {
                             </span>
                           </td>
                           <td>
-                            {row.aging != null ? `${row.aging} day(s)` : "-"}
+                            {statusMeta.label.toLowerCase() === "paid"
+                              ? "-" 
+                              : (row.aging != null ? `${row.aging} day(s)` : "-")}
                           </td>
                           <td style={{ textAlign: "center" }}>
                             <button
