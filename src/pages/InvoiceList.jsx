@@ -1,7 +1,8 @@
 // src/pages/InvoiceList.jsx
 import { useEffect, useState } from "react";
-import { FaInfoCircle, FaFileInvoiceDollar, FaFileAlt, FaTimes } from "react-icons/fa";
 import GclLayout from "../layouts/GclLayout";
+import Swal from "sweetalert2";
+import { FaInfoCircle, FaFileInvoiceDollar, FaFileAlt, FaTimes, FaSpinner } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
 
@@ -51,13 +52,13 @@ function getInvoiceStatusMeta(rawStatus) {
 
 /** MODAL DETAIL INVOICE + FAKTUR PAJAK */
 function InvoiceDetailModal({ open, invoice, onClose }) {
+  // State untuk menangani proses loading saat menembak API faktur
+  const [isFetchingFaktur, setIsFetchingFaktur] = useState(false);
+
   if (!open || !invoice) return null;
 
   const statusMeta = getInvoiceStatusMeta(invoice.status);
   const invoiceUrl = invoice.url || "";
-  // NOTE:
-  // Backend disarankan menambah field 'faktur_url' / 'efaktur_url' di API
-  const fakturUrl = invoice.faktur_url || invoice.efaktur_url || "";
 
   const handleOpenInvoice = () => {
     if (invoiceUrl) {
@@ -65,11 +66,53 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
     }
   };
 
-  const handleOpenFaktur = () => {
-    if (fakturUrl) {
-      window.open(fakturUrl, "_blank", "noopener,noreferrer");
+  // Fungsi dinamis untuk memanggil API Faktur Pajak
+  const handleOpenFaktur = async () => {
+  try {
+    setIsFetchingFaktur(true);
+    const token = localStorage.getItem("gcl_access_token");
+
+    const invoiceNo = invoice.invoice_number || "";
+    const url = `${API_BASE}/api/faktur_pajak?invoice_no=${encodeURIComponent(invoiceNo)}&X-API-KEY=gateway-fms`;
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.status) {
+      throw new Error(json.message || "Gagal mengambil data Faktur Pajak dari server.");
     }
-  };
+
+    const fakturDownloadUrl = json.data?.file_url;
+
+    if (fakturDownloadUrl) {
+      window.open(fakturDownloadUrl, "_blank", "noopener,noreferrer");
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "File Tidak Ditemukan",
+        text: "File faktur tidak tersedia untuk nomor invoice ini.",
+        confirmButtonColor: "#3085d6"
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching faktur:", err);
+    Swal.fire({
+      icon: "error",
+      title: "Terjadi Kesalahan",
+      text: err.message,
+      confirmButtonColor: "#d33"
+    });
+  } finally {
+    setIsFetchingFaktur(false);
+  }
+};
 
   return (
     <div className="gcl-modal-backdrop">
@@ -104,100 +147,94 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
               marginBottom: "12px",
             }}
           >
-            {/* Kolom kiri – detail invoice */}
-            <div className="gcl-form-column">
-              <div className="gcl-form-group">
-                <label>Invoice Number</label>
-                <div>{invoice.invoice_number || "-"}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>Invoice Date</label>
-                <div>{formatYmdToDmy(invoice.invoice_date)}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>Customer</label>
-                <div style={{ whiteSpace: "pre-line" }}>
-                  {invoice.kepada || "-"}
-                </div>
-              </div>
-              <div className="gcl-form-group">
-                <label>SI Number</label>
-                <div>{invoice.si_number || "-"}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>Status</label>
-                <span className={statusMeta.className}>{statusMeta.label}</span>
-              </div>
-              <div className="gcl-form-group">
-                <label>Aging</label>
-                <div>
-                  {invoice.aging != null ? `${invoice.aging} day(s)` : "-"}
-                </div>
-              </div>
-            </div>
-
-            {/* Kolom kanan – shipment info */}
-            <div className="gcl-form-column">
-              <div className="gcl-form-group">
-                <label>Job No</label>
-                <div>{invoice.job_no || "-"}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>HBL</label>
-                <div>{invoice.hbl || "-"}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>Destination</label>
-                <div>{invoice.destination || "-"}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>Shipment Type</label>
-                <div>{invoice.type || "-"}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>ATD</label>
-                <div>{formatYmdToDmy(invoice.atd)}</div>
-              </div>
-              <div className="gcl-form-group">
-                <label>Booking Code</label>
-                <div>{invoice.booking_code || "-"}</div>
-              </div>
-            </div>
           </div>
 
           {/* Tombol aksi invoice & faktur pajak */}
+          {/* ACTION BOX: Dokumen & Faktur */}
           <div
             style={{
               display: "flex",
-              gap: "10px",
-              marginBottom: "10px",
+              justifyContent: "space-between",
+              alignItems: "center",
               flexWrap: "wrap",
+              gap: "15px",
+              marginTop: "15px",
+              marginBottom: "15px",
+              padding: "16px 20px",
+              backgroundColor: "#f8fafc", // Warna background abu-abu kebiruan sangat soft
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
             }}
           >
-            <button
-              type="button"
-              className="gcl-btn gcl-btn-primary"
-              onClick={handleOpenInvoice}
-              disabled={!invoiceUrl}
-            >
-              <FaFileInvoiceDollar /> Open Invoice PDF
-            </button>
+            <div style={{ flex: "1 1 min-content" }}>
+              <h4 style={{ margin: "0 0 4px 0", fontSize: "14px", color: "#334155" }}>
+                Dokumen Tagihan
+              </h4>
+              <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                Unduh invoice utama atau cari faktur pajak (e-Faktur) secara real-time.
+              </p>
+            </div>
 
-            <button
-              type="button"
-              className="gcl-btn gcl-btn-ghost"
-              onClick={handleOpenFaktur}
-              disabled={!fakturUrl}
-            >
-              <FaFileAlt /> Open Tax Invoice (Faktur)
-            </button>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              {/* TOMBOL 1: INVOICE UTAMA (Biru) */}
+              <button
+                type="button"
+                className="gcl-btn"
+                onClick={handleOpenInvoice}
+                disabled={!invoiceUrl}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  backgroundColor: invoiceUrl ? "#2563eb" : "#94a3b8",
+                  color: "#fff",
+                  fontWeight: "600",
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  border: "none",
+                  boxShadow: invoiceUrl ? "0 4px 6px -1px rgba(37, 99, 235, 0.2)" : "none",
+                  cursor: invoiceUrl ? "pointer" : "not-allowed",
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                <FaFileInvoiceDollar size={16} /> 
+                Open Invoice PDF
+              </button>
 
-            {!fakturUrl && (
-              <span style={{ fontSize: 11, color: "#6b7280" }}>
-                Faktur pajak belum tersedia di API (perlu field{" "}
-                <code>faktur_url</code> / <code>efaktur_url</code>).
-              </span>
-            )}
+              {/* TOMBOL 2: FAKTUR PAJAK DINAMIS (Emerald/Hijau) */}
+              <button
+                type="button"
+                className="gcl-btn"
+                onClick={handleOpenFaktur}
+                disabled={isFetchingFaktur}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  backgroundColor: isFetchingFaktur ? "#f59e0b" : "#10b981", // Amber saat loading, Hijau Emerald saat standby
+                  color: "#fff",
+                  fontWeight: "600",
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  border: "none",
+                  boxShadow: isFetchingFaktur ? "none" : "0 4px 6px -1px rgba(16, 185, 129, 0.2)",
+                  cursor: isFetchingFaktur ? "wait" : "pointer",
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                {isFetchingFaktur ? (
+                  <>
+                    <FaSpinner size={16} className="fa-spin" /> {/* Pastikan class fa-spin ada di CSS global Anda, atau akan diam saja */}
+                    Mencari Faktur...
+                  </>
+                ) : (
+                  <>
+                    <FaFileAlt size={16} />
+                    Open Tax Invoice
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Preview iframe (optional) */}
@@ -259,7 +296,7 @@ function InvoiceList() {
           method: "GET",
           headers: {
             Accept: "application/json",
-            Authorization: `Bearer ${token}`, // kalau backend tidak butuh, bisa dihapus
+            Authorization: `Bearer ${token}`, 
           },
         });
 
