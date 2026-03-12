@@ -194,7 +194,7 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
                 }}
               >
                 <FaFileInvoiceDollar size={16} /> 
-                Open Invoice PDF
+                 Invoice PDF
               </button>
 
               {/* TOMBOL 2: FAKTUR PAJAK DINAMIS (Emerald/Hijau) */}
@@ -226,7 +226,7 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
                 ) : (
                   <>
                     <FaFileAlt size={16} />
-                    Open Tax Invoice
+                    Faktur Pajak
                   </>
                 )}
               </button>

@@ -12,12 +12,12 @@ function addMarkup20(value) {
 }
 
 const AIRLINE_LOGOS = {
-  CI: "../src/assets/Airlines/ci.png",
-  TK: "../src/assets/Airlines/tk.png",
-  JT: "../src/assets/Airlines/jt.png",
-  MH: "../src/assets/Airlines/mh.png",
-  SV: "../src/assets/Airlines/sv.png",
-  GA: "../src/assets/Airlines/ga.png",
+  CI: "/assets/Airlines/ci.png",
+  TK: "/assets/Airlines/tk.png",
+  JT: "/assets/Airlines/jt.png",
+  MH: "/assets/Airlines/mh.png",
+  SV: "/assets/Airlines/sv.png",
+  GA: "/assets/Airlines/ga.png",
 };
 
 function getAirlineLogo(code) {
