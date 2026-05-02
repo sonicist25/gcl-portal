@@ -12,9 +12,10 @@ import L from "leaflet";
 import GclLayout from "../layouts/GclLayout";
 import "leaflet/dist/leaflet.css";
 import "../styles/gocometTracking.css";
-import { apiFetch } from "../utils/authApi";
 
-// --- KONFIGURASI ICON LEAFLET ---
+// =========================
+// LEAFLET DEFAULT ICON FIX
+// =========================
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -25,7 +26,54 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// --- HELPER FUNCTIONS ---
+// =========================
+// CUSTOM ICONS
+// =========================
+
+const startTrackIcon = L.divIcon({
+  className: "start-track-marker",
+  html: `<div class="map-dot map-dot-blue"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [6, 6],
+});
+
+const polIcon = L.divIcon({
+  className: "pol-track-marker",
+  html: `<div class="map-dot map-dot-green"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+const potIcon = L.divIcon({
+  className: "pot-track-marker",
+  html: `<div class="map-dot map-dot-purple"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+const podIcon = L.divIcon({
+  className: "pod-track-marker",
+  html: `<div class="map-dot map-dot-yellow"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+const currentCargoIcon = L.divIcon({
+  className: "current-cargo-marker",
+  html: `
+    <div class="ship-marker-wrap">
+      <span class="ship-pulse"></span>
+      <img src="/ship.png" class="ship-marker-img" />
+    </div>
+  `,
+  iconSize: [44, 44],
+  iconAnchor: [22, 22],
+  popupAnchor: [0, -18],
+});
+
+// =========================
+// HELPERS
+// =========================
 const cleanPortName = (rawName) => {
   if (!rawName || typeof rawName !== "string") return "";
   let name = rawName.toUpperCase();
@@ -69,7 +117,97 @@ const parseDate = (dateStr) => {
   return 0;
 };
 
-// --- LOGIKA UTAMA: EVENT LIST AS MASTER ---
+const parsePointString = (value) => {
+  if (!value || typeof value !== "string") return null;
+
+  const parts = value.split(",").map((v) => Number(v.trim()));
+  if (parts.length < 2) return null;
+
+  const lat = parts[0];
+  const lon = parts[1];
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return [lat, lon];
+};
+
+const formatDisplayDate = (value) => {
+  if (!value) return "-";
+
+  const d = new Date(value);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return value;
+};
+
+const isValidCoord = (value) => {
+  if (value === null || value === undefined || value === "") return false;
+
+  const num = Number(value);
+  return Number.isFinite(num);
+};
+
+const getAisCurrentPoint = (data) => {
+  const ais = data?.ais_current;
+  if (!ais) return null;
+
+  if (isValidCoord(ais.lat) && isValidCoord(ais.lon)) {
+    return [Number(ais.lat), Number(ais.lon)];
+  }
+
+  if (Array.isArray(ais.lat_lon) && ais.lat_lon.length >= 2) {
+    const lat = ais.lat_lon[0];
+    const lon = ais.lat_lon[1];
+
+    if (isValidCoord(lat) && isValidCoord(lon)) {
+      return [Number(lat), Number(lon)];
+    }
+  }
+
+  return null;
+};
+
+const getAisHistoryPoints = (data) => {
+  if (!data?.ais_history) return [];
+
+  let source = [];
+
+  if (Array.isArray(data.ais_history.tracks) && data.ais_history.tracks.length > 1) {
+    source = data.ais_history.tracks;
+  } else if (
+    Array.isArray(data?.ais_history?.tracks) &&
+    data.ais_history.tracks.length === 1 &&
+    Array.isArray(data.ais_history.tracks[0]?.raw)
+  ) {
+    source = data.ais_history.tracks[0].raw;
+  } else if (Array.isArray(data?.ais_history?.raw?.data?.points)) {
+    source = data.ais_history.raw.data.points;
+  } else if (Array.isArray(data?.ais_history?.raw?.points)) {
+    source = data.ais_history.raw.points;
+  }
+
+  return source
+    .map((item) => {
+      const lat = Number(item?.lat ?? item?.latitude);
+      const lon = Number(item?.lon ?? item?.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        return [lat, lon];
+      }
+      return null;
+    })
+    .filter(Boolean);
+};
+
+// =========================
+// JOURNEY GENERATOR
+// =========================
 const generateUnifiedJourney = (data) => {
   const rawStepper = (data.stepper || []).filter(
     (step) => step && typeof step === "object"
@@ -110,7 +248,6 @@ const generateUnifiedJourney = (data) => {
         eventName.includes("invoice");
 
       const isTruck =
-        evtType.includes("collection") ||
         evtType.includes("deliver") ||
         evtType.includes("delivery") ||
         evtType.includes("moving") ||
@@ -119,6 +256,7 @@ const generateUnifiedJourney = (data) => {
         eventName.includes("moving") ||
         eventName.includes("delivery") ||
         eventName.includes("gate in") ||
+        evtType.includes("empty") ||
         eventName.includes("gate out");
 
       const isWarehouse =
@@ -155,7 +293,6 @@ const generateUnifiedJourney = (data) => {
         container: "",
       };
 
-      // hanya event ocean yang dicari vessel/container
       if (!isTruck && !isDoc && !isWarehouse) {
         const matchedStepper = rawStepper.find((s) => {
           if (!isSameLocation(s.location, portName)) return false;
@@ -216,19 +353,32 @@ const generateUnifiedJourney = (data) => {
   return timeline;
 };
 
-function ChangeView({ center }) {
+// =========================
+// MAP VIEW ADJUSTER
+// =========================
+function ChangeView({ center, zoom = 3, bounds = null }) {
   const map = useMap();
-  if (center) map.setView(center, 4);
+
+  useEffect(() => {
+    if (bounds && bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [40, 40] });
+    } else if (center) {
+      map.setView(center, zoom);
+    }
+  }, [map, center, zoom, bounds]);
+
   return null;
 }
 
+// =========================
+// COMPONENT
+// =========================
 function GocometTracking({ defaultSiNumber = "" }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSi = searchParams.get("si_number");
 
   const [inputSi, setInputSi] = useState(urlSi || defaultSiNumber);
   const [activeSi, setActiveSi] = useState(urlSi || "");
-
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [coords, setCoords] = useState({});
@@ -247,15 +397,26 @@ function GocometTracking({ defaultSiNumber = "" }) {
     const loadData = async () => {
       setLoading(true);
       try {
+        const API_BASE =
+          import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
+
         const res = await fetch(
-          `https://gateway-cl.com/api/track_gocomet?X-API-KEY=gateway-fms&si_number=${encodeURIComponent(
+          `${API_BASE}/api/track_gocomet?X-API-KEY=gateway-fms&si_number=${encodeURIComponent(
             activeSi
           )}`
         );
+
         const json = await res.json();
+        console.log("FULL JSON FROM BROWSER:", JSON.stringify(json, null, 2));
+console.log("ROOT KEYS:", Object.keys(json || {}));
+console.log("json.ais_current:", json?.ais_current);
+console.log("json.ais_history:", json?.ais_history);
+console.log("json.data?.ais_current:", json?.data?.ais_current);
+console.log("json.data?.ais_history:", json?.data?.ais_history);
         setData(json);
       } catch (e) {
         console.error(e);
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -329,29 +490,183 @@ function GocometTracking({ defaultSiNumber = "" }) {
     fetchCoords();
   }, [data]);
 
-  const routePath = useMemo(() => {
-    if (!data) return [];
-    const eventList = data["event list"] || data.event_list || [];
-    return eventList
-      .filter((e) => e && (e["port name"] || e.port_name))
-      .map((e) => coords[cleanPortName(e["port name"] || e.port_name)])
-      .filter(Boolean);
-  }, [data, coords]);
+const headerObj = data?.header?.[0]?.[0] || data?.header?.[0] || null;
+const aisCurrentPoint = useMemo(() => getAisCurrentPoint(data), [data]);
+const aisHistoryPath = useMemo(() => getAisHistoryPoints(data), [data]);
+const polPoint = useMemo(() => parsePointString(headerObj?.pol_point), [headerObj]);
+const podPoint = useMemo(() => parsePointString(headerObj?.pod_point), [headerObj]);
+const potPoint = useMemo(() => parsePointString(headerObj?.pot_point), [headerObj]);
+
+
+const latestAisPoint = useMemo(() => {
+  if (aisCurrentPoint) return aisCurrentPoint;
+  if (aisHistoryPath.length > 0) return aisHistoryPath[aisHistoryPath.length - 1];
+  return null;
+}, [aisCurrentPoint, aisHistoryPath]);
+
+const expectedPath = useMemo(() => {
+  if (!latestAisPoint) return [];
+
+  const pts = [latestAisPoint];
+
+  if (potPoint) pts.push(potPoint);
+  if (podPoint) pts.push(podPoint);
+
+  return pts.length > 1 ? pts : [];
+}, [latestAisPoint, potPoint, podPoint]);
+
+
+const fallbackMapPath = useMemo(() => {
+  if (!data) return [];
+
+  const eventList = data["event list"] || data.event_list || [];
+  return eventList
+    .filter((e) => e && (e["port name"] || e.port_name))
+    .map((e) => coords[cleanPortName(e["port name"] || e.port_name)])
+    .filter(Boolean);
+}, [data, coords]);
+
+const hasAisHistory = aisHistoryPath.length > 1;
+const hasAisCurrent = !!aisCurrentPoint;
+
+const mapMode = hasAisHistory
+  ? "ais_history"
+  : hasAisCurrent
+  ? "ais_current"
+  : fallbackMapPath.length > 0
+  ? "fallback"
+  : "empty";
+
+const mapCenter = useMemo(() => {
+  if (hasAisCurrent) return aisCurrentPoint;
+  if (hasAisHistory) return aisHistoryPath[aisHistoryPath.length - 1];
+  if (fallbackMapPath.length > 0) return fallbackMapPath[0];
+  return [15, 95];
+}, [hasAisCurrent, aisCurrentPoint, hasAisHistory, aisHistoryPath, fallbackMapPath]);
+
+const mapBounds = useMemo(() => {
+  const pts = [];
+
+  if (hasAisHistory) pts.push(...aisHistoryPath);
+  if (hasAisCurrent) pts.push(aisCurrentPoint);
+  if (!hasAisHistory && !hasAisCurrent) pts.push(...fallbackMapPath);
+  if (polPoint) pts.push(polPoint);
+  if (potPoint) pts.push(potPoint);
+  if (podPoint) pts.push(podPoint);
+
+  return pts.filter(Boolean);
+}, [hasAisHistory, aisHistoryPath, hasAisCurrent, aisCurrentPoint, fallbackMapPath, podPoint, potPoint, polPoint]);
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const val = inputSi.trim();
     if (!val) return;
-
     setActiveSi(val);
     setSearchParams({ si_number: val });
   };
 
-  const headerObj = data?.header?.[0]?.[0] || data?.header?.[0] || null;
-
   return (
     <GclLayout>
       <div className="gocomet-dark-container">
+        <style>{`
+          .tracking-content-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1.9fr) minmax(340px, 0.9fr);
+            gap: 18px;
+            align-items: stretch;
+            margin-top: 18px;
+          }
+
+          .tracking-map-panel,
+          .tracking-journey-panel {
+            min-height: 620px;
+            height: 620px;
+            position: relative;
+          }
+
+          .tracking-leaflet-map {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+          }
+
+          .tracking-journey-panel {
+            display: flex;
+            flex-direction: column;
+          }
+
+          .tracking-timeline-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+          }
+
+          .tracking-map-legend {
+            position: absolute;
+            left: 14px;
+            bottom: 14px;
+            z-index: 500;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 12px;
+            padding: 10px 12px;
+            backdrop-filter: blur(8px);
+            color: #e2e8f0;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .tracking-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .tracking-legend-item img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+          }
+
+          .tracking-legend-item .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            display: inline-block;
+            border: 2px solid white;
+          }
+
+          .tracking-legend-item .dot.blue {
+            background: #2563eb;
+          }
+
+          .tracking-legend-item .dot.yellow {
+            background: #facc15;
+          }
+
+          .tracking-legend-item .line.blue {
+            width: 24px;
+            height: 0;
+            border-top: 3px solid #2563eb;
+            display: inline-block;
+          }
+
+          @media (max-width: 1100px) {
+            .tracking-content-row {
+              grid-template-columns: 1fr;
+            }
+
+            .tracking-map-panel,
+            .tracking-journey-panel {
+              height: 520px;
+            }
+          }
+        `}</style>
+
         <div className="gocomet-top-bar">
           <h2 className="page-title">Shipment Tracking</h2>
           <form onSubmit={handleSubmit} className="search-inline">
@@ -399,11 +714,27 @@ function GocometTracking({ defaultSiNumber = "" }) {
               </div>
 
               <div className="header-item">
+                <span className="lbl">Map Source</span>
+                <span className="val">
+                  {mapMode === "ais_history"
+                    ? "AIS History"
+                    : mapMode === "ais_current"
+                    ? "AIS Current"
+                    : mapMode === "fallback"
+                    ? "Route Fallback"
+                    : "-"}
+                </span>
+              </div>
+
+              <div className="header-item">
+                <span className="lbl">POD</span>
+                <span className="val">{headerObj.pod || "-"}</span>
+              </div>
+
+              <div className="header-item">
                 <span className="lbl">Last Update</span>
                 <span className="val" style={{ fontSize: "0.9rem" }}>
-                  {headerObj["last update"]
-                    ? headerObj["last update"].split("T")[0]
-                    : "-"}
+                  {formatDisplayDate(headerObj["last update"])}
                 </span>
               </div>
 
@@ -415,122 +746,339 @@ function GocometTracking({ defaultSiNumber = "" }) {
               )}
             </div>
 
-            <div className="map-panel">
-              {routePath.length > 0 ? (
-                <MapContainer
-                  center={routePath[0]}
-                  zoom={3}
-                  className="leaflet-map-view"
-                  minZoom={2}
-                  maxZoom={18}
-                  scrollWheelZoom
-                >
-                  <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    noWrap
-                  />
-                  <ChangeView center={routePath[0]} />
-                  {routePath.map((pos, i) => (
-                    <Marker key={i} position={pos}>
-                      <Popup>Point {i + 1}</Popup>
-                    </Marker>
-                  ))}
-                  <Polyline
-                    positions={routePath}
-                    color="#38bdf8"
-                    weight={2}
-                    dashArray="5, 5"
-                  />
-                </MapContainer>
-              ) : (
-                <div className="map-loading">Processing Map Coordinates...</div>
-              )}
-            </div>
+            <div className="tracking-content-row">
+              <div className="tracking-map-panel">
+                {mapMode !== "empty" ? (
+                  <>
+                    <MapContainer
+                      center={mapCenter}
+                      zoom={3}
+                      className="tracking-leaflet-map"
+                      minZoom={2}
+                      maxZoom={18}
+                      maxBounds={[
+                        [-85, -180],
+                        [85, 180],
+                      ]}
+                      maxBoundsViscosity={1.0}
+                      scrollWheelZoom
+                      worldCopyJump={false}
+                    >
+                      <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        noWrap={true}
+                        bounds={[
+                          [-85, -180],
+                          [85, 180],
+                        ]}
+                      />
 
-            <div className="journey-panel">
-              <h3 className="panel-title">Shipment Journey Flow</h3>
-              <div className="timeline-wrapper">
-                {journey.length > 0 ? (
-                  journey.map((step, idx) => (
-                    <div key={idx} className="tl-item">
-                      <div className="tl-left">
-                        <div
-                          className={`tl-dot ${
-                            step["location type"]?.includes("Arrival")
-                              ? "arr"
-                              : "dep"
-                          }`}
-                        ></div>
-                        {idx !== journey.length - 1 && <div className="tl-line"></div>}
+                      <ChangeView center={mapCenter} zoom={3} bounds={mapBounds} />
+
+                      {mapMode === "ais_history" && (
+                        <>
+                          <Polyline
+                            positions={aisHistoryPath}
+                            color="#2563eb"
+                            weight={4}
+                            opacity={0.95}
+                          />
+
+                          {aisHistoryPath.length > 0 && (
+                            <Marker position={aisHistoryPath[0]} icon={startTrackIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Start AIS Track</strong>
+                                  <br />
+                                  Vessel: {data?.ais_current?.current_vessel || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {aisCurrentPoint && (
+                            <Marker position={aisCurrentPoint} icon={currentCargoIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Current Cargo Position</strong>
+                                  <br />
+                                  Vessel: {data?.ais_current?.current_vessel || "-"}
+                                  <br />
+                                  Speed: {data?.ais_current?.speed || "-"}
+                                  <br />
+                                  Updated:{" "}
+                                  {formatDisplayDate(data?.ais_current?.last_updated)}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {polPoint && (
+                            <Marker position={polPoint} icon={polIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>POL</strong>
+                                  <br />
+                                  {headerObj?.pol || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {podPoint && (
+                            <Marker position={podPoint} icon={podIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Final POD</strong>
+                                  <br />
+                                  {headerObj?.pod || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {/* Actual AIS path */}
+                            {aisHistoryPath.length > 1 && (
+                              <Polyline
+                                positions={aisHistoryPath}
+                                color="#2563eb"
+                                weight={4}
+                                opacity={0.95}
+                              />
+                            )}
+
+                            {/* Expected / ETA path */}
+                            {expectedPath.length > 1 && (
+                              <Polyline
+                                positions={expectedPath}
+                                color="#facc15"
+                                weight={3}
+                                opacity={0.85}
+                                dashArray="8, 8"
+                              />
+                            )}
+                        </>
+                      )}
+
+                      {mapMode === "ais_current" && (
+                        <>
+                          {aisCurrentPoint && (
+                            <Marker position={aisCurrentPoint} icon={currentCargoIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Current Cargo Position</strong>
+                                  <br />
+                                  Vessel: {data?.ais_current?.current_vessel || "-"}
+                                  <br />
+                                  Speed: {data?.ais_current?.speed || "-"}
+                                  <br />
+                                  Updated:{" "}
+                                  {formatDisplayDate(data?.ais_current?.last_updated)}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {polPoint && (
+                            <Marker position={polPoint} icon={polIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>POL</strong>
+                                  <br />
+                                  {headerObj?.pol || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {podPoint && (
+                            <Marker position={podPoint} icon={podIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Final POD</strong>
+                                  <br />
+                                  {headerObj?.pod || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+                        </>
+                      )}
+
+                      {mapMode === "fallback" && (
+                        <>
+                          {fallbackMapPath.map((pos, i) => (
+                            <Marker key={`fallback-${i}`} position={pos}>
+                              <Popup>Route Point {i + 1}</Popup>
+                            </Marker>
+                          ))}
+
+                          {fallbackMapPath.length > 1 && (
+                            <Polyline
+                              positions={fallbackMapPath}
+                              color="#38bdf8"
+                              weight={3}
+                              dashArray="5, 5"
+                              opacity={0.85}
+                            />
+                          )}
+
+                          {polPoint && (
+                            <Marker position={polPoint} icon={polIcon}>
+                              <Popup>
+                                <strong>POL</strong>
+                                <br />
+                                {headerObj?.pol || "-"}
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {potPoint && (
+                            <Marker position={potPoint} icon={potIcon}>
+                              <Popup>
+                                <strong>Transhipment Port</strong>
+                                <br />
+                                {headerObj?.pot || "-"}
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {podPoint && (
+                            <Marker position={podPoint} icon={podIcon}>
+                              <Popup>
+                                <strong>Final POD</strong>
+                                <br />
+                                {headerObj?.pod || "-"}
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {latestAisPoint && (
+                            <Marker position={latestAisPoint} icon={currentCargoIcon}>
+                              <Popup>
+                                <strong>Current Cargo Position</strong>
+                                <br />
+                                Vessel: {data?.ais_current?.current_vessel || "-"}
+                                <br />
+                                Speed: {data?.ais_current?.speed || "-"}
+                                <br />
+                                Updated: {formatDisplayDate(data?.ais_current?.last_updated)}
+                              </Popup>
+                            </Marker>
+                          )}
+                        </>
+                      )}
+                    </MapContainer>
+
+                    <div className="tracking-map-legend">
+                      <div className="tracking-legend-item">
+                        <img src="/ship.png" alt="ship" />
+                        <span>Current cargo position</span>
                       </div>
-
-                      <div className="tl-content">
-                        <div className="tl-header">
-                          <span className="tl-loc">{cleanPortName(step.location)}</span>
-                          <span
-                            className={`tl-type ${step.is_injected ? "injected" : ""}`}
-                          >
-                            {step["location type"] || step.location_type || "-"}
-                          </span>
-                        </div>
-
-                        {step.vessel && (
-                          <div className="tl-vessel">
-                            <span className="v-icon">🚢</span>
-                            <div className="v-detail">
-                              <strong>{step.vessel}</strong>
-                              {step.container && <span> • {step.container}</span>}
-                            </div>
-                          </div>
-                        )}
-
-                        {step.is_document && (
-                          <div className="tl-vessel doc-type">
-                            <span className="v-icon">📄</span>
-                            <div className="v-detail">
-                              <strong>Document Processing</strong>
-                              <span>{step["event name"]}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {step.is_truck && (
-                          <div className="tl-vessel truck-type">
-                            <span className="v-icon">🚚</span>
-                            <div className="v-detail">
-                              <strong>Logistics / Trucking</strong>
-                              <span>{step["event name"]}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {step.is_warehouse && (
-                          <div className="tl-vessel warehouse-type">
-                            <span className="v-icon">🏬</span>
-                            <div className="v-detail">
-                              <strong>Warehouse Activity</strong>
-                              <span>{step["event name"]}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="tl-time">
-                          {step["event time"] || step.event_time || ""}
-                        </div>
+                      <div className="tracking-legend-item">
+                        <span className="dot blue"></span>
+                        <span>Origin</span>
+                      </div>
+                      <div className="tracking-legend-item">
+                        <span className="dot yellow"></span>
+                        <span>Destination</span>
+                      </div>
+                      <div className="tracking-legend-item">
+                        <span className="line blue"></span>
+                        <span>AIS vessel route</span>
                       </div>
                     </div>
-                  ))
+                  </>
                 ) : (
-                  <div
-                    style={{
-                      color: "#94a3b8",
-                      textAlign: "center",
-                      padding: "20px",
-                    }}
-                  >
-                    No detailed events available.
-                  </div>
+                  <div className="map-loading">Processing Map Coordinates...</div>
                 )}
+              </div>
+
+              <div className="journey-panel tracking-journey-panel">
+                <h3 className="panel-title">Shipment Journey Flow</h3>
+                <div className="timeline-wrapper tracking-timeline-wrapper">
+                  {journey.length > 0 ? (
+                    journey.map((step, idx) => (
+                      <div key={idx} className="tl-item">
+                        <div className="tl-left">
+                          <div
+                            className={`tl-dot ${
+                              step["location type"]?.includes("Arrival")
+                                ? "arr"
+                                : "dep"
+                            }`}
+                          ></div>
+                          {idx !== journey.length - 1 && <div className="tl-line"></div>}
+                        </div>
+
+                        <div className="tl-content">
+                          <div className="tl-header">
+                            <span className="tl-loc">{cleanPortName(step.location)}</span>
+                            <span
+                              className={`tl-type ${step.is_injected ? "injected" : ""}`}
+                            >
+                              {step["location type"] || step.location_type || "-"}
+                            </span>
+                          </div>
+
+                          {step.vessel && (
+                            <div className="tl-vessel">
+                              <span className="v-icon">🚢</span>
+                              <div className="v-detail">
+                                <strong>{step.vessel}</strong>
+                                {step.container && <span> • {step.container}</span>}
+                              </div>
+                            </div>
+                          )}
+
+                          {step.is_document && (
+                            <div className="tl-vessel doc-type">
+                              <span className="v-icon">📄</span>
+                              <div className="v-detail">
+                                <strong>Document Processing</strong>
+                                <span>{step["event name"]}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {step.is_truck && (
+                            <div className="tl-vessel truck-type">
+                              <span className="v-icon">🚚</span>
+                              <div className="v-detail">
+                                <strong>Logistics / Trucking</strong>
+                                <span>{step["event name"]}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {step.is_warehouse && (
+                            <div className="tl-vessel warehouse-type">
+                              <span className="v-icon">🏬</span>
+                              <div className="v-detail">
+                                <strong>Warehouse Activity</strong>
+                                <span>{step["event name"]}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="tl-time">
+                            {step["event time"] || step.event_time || ""}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        color: "#94a3b8",
+                        textAlign: "center",
+                        padding: "20px",
+                      }}
+                    >
+                      No detailed events available.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -598,7 +1146,13 @@ function GocometTracking({ defaultSiNumber = "" }) {
                 fillOpacity="0.8"
               />
               <path d="M100 40V60" stroke="#94A3B8" strokeWidth="2" />
-              <circle cx="100" cy="35" r="5" fill="#EF4444" className="animate-pulse" />
+              <circle
+                cx="100"
+                cy="35"
+                r="5"
+                fill="#EF4444"
+                className="animate-pulse"
+              />
             </svg>
 
             <h3 className="empty-title">Ready to Track</h3>

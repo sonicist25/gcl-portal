@@ -152,24 +152,25 @@ function getTrackingStatusMeta(rawStatus) {
     };
   if (u === "EXPIRED")
     return {
-      label: "Expired",
+      label: "Needs Update",
       className: "gcl-pill-status gcl-pill-status-expired",
     };
   if (u === "INVALID")
     return {
-      label: "Invalid",
+      label: "Correction Needed",
       className: "gcl-pill-status gcl-pill-status-invalid",
     };
   if (u === "DATA NOT FOUND")
     return {
-      label: "Data Not Found",
+      label: "On Progress",
       className: "gcl-pill-status gcl-pill-status-data-not-found",
     };
   if (u === "ACTION REQUIRED")
     return {
-      label: "Action Required",
+      label: "Awaiting Action",
       className: "gcl-pill-status gcl-pill-status-action-required",
     };
+
   if (u === "PROBABLE DELAY")
     return {
       label: "Probable Delay",
@@ -178,6 +179,11 @@ function getTrackingStatusMeta(rawStatus) {
   if (u === "YET TO START")
     return {
       label: "Yet to Start",
+      className: "gcl-pill-status gcl-pill-status-yet",
+    };
+  if (u === "NOT TRACKED")
+    return {
+      label: "On Progress",
       className: "gcl-pill-status gcl-pill-status-yet",
     };
   return { label: s, className: "gcl-pill-status gcl-pill-status-none" };
