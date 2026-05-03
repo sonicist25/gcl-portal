@@ -667,20 +667,24 @@ const mapBounds = useMemo(() => {
           }
         `}</style>
 
-        <div className="gocomet-top-bar">
-          <h2 className="page-title">Shipment Tracking</h2>
-          <form onSubmit={handleSubmit} className="search-inline">
-            <input
-              value={inputSi}
-              onChange={(e) => setInputSi(e.target.value)}
-              placeholder="Enter HBL Number..."
-              className="si-input"
-            />
-            <button type="submit" disabled={loading}>
-              {loading ? "Searching..." : "Track"}
-            </button>
-          </form>
-        </div>
+      <div className="gocomet-top-bar">
+  <div className="gocomet-title-wrap">
+    <h2 className="page-title">Shipment Tracking</h2>
+    <p className="page-subtitle">Live tracking with arrival forecasts — concise, clear, and supply‑chain friendly.</p>
+  </div>
+
+  <form onSubmit={handleSubmit} className="search-inline" aria-label="Track shipment">
+    <input
+      value={inputSi}
+      onChange={(e) => setInputSi(e.target.value)}
+      placeholder="Enter HBL Number..."
+      className="si-input"
+    />
+    <button type="submit" disabled={loading} className="si-button">
+      {loading ? "Searching..." : "Track"}
+    </button>
+  </form>
+</div>
 
         {loading ? (
           <div className="loading-overlay">

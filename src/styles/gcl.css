@@ -1,31 +1,180 @@
-/* LAYOUT UTAMA */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* LAYOUT UTAMA (Gradasi Utama Ditaruh di Sini) */
 .gcl-layout {
   display: flex;
   min-height: 100vh;
-  /* sidebar tetap gelap, ke tengah ada biru tapi turun lagi ke navy */
-  background:
-    radial-gradient(circle at 0% 50%, #020617 0, #020617 30%, transparent 60%),
-    linear-gradient(120deg, #020617 0, #0f4fd8 45%, #020617 100%);
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #f1f5f9;
+  /* Gradasi menyambung mulus dari ujung kiri ke ujung kanan layar */
+  background: linear-gradient(135deg, #020617 0%, #020617 15%, #0f4fd8 50%, #020617 100%);
 }
 
-/* SIDEBAR (biar tetap solid gelap) */
+/* SIDEBAR */
 .gcl-sidebar {
-  width: 260px;              /* sesuaikan kalau beda */
-  background: #020617;
+  width: 280px;
+  /* KUNCI: Gunakan warna tembus pandang (kaca) agar gradasi belakang terlihat, 
+     tapi tetap berikan efek gelap agar area menu terasa solid */
+  background: rgba(2, 6, 23, 0.4); 
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
 }
 
 /* AREA MAIN BODY */
 .gcl-main {
   flex: 1;
-  /* padding boleh 0 karena sudah diatur di .gcl-schedule-page */
   padding: 0;
-  /* layer gelap lagi di belakang konten supaya tidak terlalu biru */
-  background:
-    radial-gradient(circle at 0% 0%, rgba(15, 23, 42, 0.9) 0, transparent 55%),
-    linear-gradient(180deg, #0f4fd8 0, #020617 65%);
+  /* KUNCI: Transparan 100% agar gradasi biru dari .gcl-layout terlihat mulus */
+  background: transparent; 
+  position: relative;
+  overflow-y: auto;
+  height: 100vh;
 }
 
-/* Tambahkan di file CSS global Anda */
+/* HEADER SIDEBAR & LOGO */
+.gcl-sidebar-header {
+  padding: 2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gcl-sidebar-logo-img {
+  width: 45px;
+  height: auto;
+  border-radius: 8px; /* Efek halus pada pinggiran logo */
+  box-shadow: 0 4px 10px rgba(0, 86, 179, 0.4); /* Glow biru tipis di belakang logo */
+}
+
+.gcl-sidebar-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.gcl-sidebar-logo-text span {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+
+.gcl-sidebar-logo-text small {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* NAVIGASI MENU */
+.gcl-sidebar-nav {
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem; /* Jarak antar tombol */
+  overflow-y: auto; /* Bisa discroll jika menu bertambah */
+}
+
+/* Custom Scrollbar untuk sidebar */
+.gcl-sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+.gcl-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+/* LABEL SEKSI (Main, Finance, Account) */
+.gcl-nav-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+}
+
+.gcl-nav-section-label:first-child {
+  margin-top: 0;
+}
+
+/* TOMBOL MENU ITEM */
+.gcl-nav-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 1.05rem; /* Ukuran font diperbesar */
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+/* Hover State Menu */
+.gcl-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  transform: translateX(4px); /* Efek bergeser ke kanan sedikit saat disentuh */
+}
+
+/* Active State Menu (Menu yang sedang dibuka) */
+.gcl-nav-item.active {
+  background: linear-gradient(90deg, rgba(15, 79, 216, 0.15) 0%, transparent 100%);
+  color: #4facfe; /* Biru terang agar kontras di dark mode */
+  font-weight: 600;
+  border-left: 4px solid #0056b3; /* Aksen garis biru Gateway di sebelah kiri */
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+/* Tombol Logout */
+.gcl-nav-item.logout {
+  margin-top: 1rem;
+  color: #fca5a5; /* Merah pudar */
+}
+
+.gcl-nav-item.logout:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-left: 4px solid #ef4444;
+}
+
+/* SweetAlert Z-Index Fix */
 .swal2-container {
-  z-index: 9999 !important; /* pastikan lebih tinggi dari modal lain */
+  z-index: 9999 !important;
+}
+
+/* Responsif untuk Tablet & Mobile */
+@media (max-width: 768px) {
+  .gcl-layout {
+    flex-direction: column;
+  }
+  
+  .gcl-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .gcl-sidebar-nav {
+    display: none; /* Sembunyikan menu di mobile (perlu ditambahkan tombol hamburger nantinya jika dibutuhkan) */
+  }
 }

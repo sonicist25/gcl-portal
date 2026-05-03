@@ -1,4 +1,3 @@
-// src/layouts/GclLayout.jsx
 import { useNavigate, useLocation } from "react-router-dom";
 
 export default function GclLayout({ children }) {
@@ -10,7 +9,8 @@ export default function GclLayout({ children }) {
     if (target === "dashboard") {
       return path === "/" || path === "/dashboard";
     }
-    return path === `/${target}`;
+    // Tambahkan trailing slash atau exact match agar /tracking tidak aktif saat di /trackings dll
+    return path.startsWith(`/${target}`);
   };
 
   return (
@@ -18,7 +18,8 @@ export default function GclLayout({ children }) {
       {/* Sidebar */}
       <aside className="gcl-sidebar">
         <div className="gcl-sidebar-header">
-          <div className="gcl-sidebar-logo-mark">G</div>
+          {/* Logo diganti menggunakan gambar */}
+         <img src={`${import.meta.env.BASE_URL}minilogo.png`} alt="Gateway Logo" className="gcl-sidebar-logo-img" />
           <div className="gcl-sidebar-logo-text">
             <span>Gateway</span>
             <small>Customer Portal</small>
@@ -26,7 +27,7 @@ export default function GclLayout({ children }) {
         </div>
 
         <nav className="gcl-sidebar-nav">
-          <div className="gcl-nav-section-label">Main</div>
+          <div className="gcl-nav-section-label">Main Menu</div>
 
           <button
             className={`gcl-nav-item ${isActive("dashboard") ? "active" : ""}`}
@@ -64,7 +65,7 @@ export default function GclLayout({ children }) {
           </button>
           
           <button
-            className={`gcl-nav-item ${isActive("trackings") ? "active" : ""}`}
+            className={`gcl-nav-item ${isActive("tracking") ? "active" : ""}`}
             onClick={() => navigate("/tracking")}
           >
             Tracking

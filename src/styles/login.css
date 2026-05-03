@@ -451,16 +451,19 @@
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>');
 }
 
-/* Responsif */
+/* Responsif untuk Layar Kecil / Tablet / HP */
 @media (max-width: 1024px) {
   .gcl-auth-wrapper {
+    flex-direction: column; /* KUNCI UTAMA: Ubah arah ke atas-bawah */
     overflow-y: auto;
-    align-items: flex-start;
+    justify-content: flex-start;
+    align-items: center; /* Pastikan semua di tengah */
     padding: 2rem 1rem;
   }
 
   .gcl-auth-overlay {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem; /* Jarak antara kotak login dan panel info */
+    padding: 0;
   }
 
   .gcl-portal-info {
@@ -471,16 +474,6 @@
     max-width: 450px;
     margin: 0 auto;
     box-sizing: border-box;
-  }
-}
-
-@media (max-width: 768px) {
-  .gcl-glass-card {
-    padding: 2rem;
-  }
-  .gcl-modal-content {
-    max-width: 90%;
-    padding: 2rem;
   }
 }
 /* =========================================
