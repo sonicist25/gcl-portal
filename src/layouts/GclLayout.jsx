@@ -57,18 +57,20 @@ export default function GclLayout({ children }) {
             Quotation
           </button>
 
+          <div className="gcl-nav-section-label">Shipment</div>
+
           <button
             className={`gcl-nav-item ${isActive("bookings") ? "active" : ""}`}
             onClick={() => navigate("/bookings")}
           >
-            Booking
+            List
           </button>
           
           <button
             className={`gcl-nav-item ${isActive("tracking") ? "active" : ""}`}
             onClick={() => navigate("/tracking")}
           >
-            Tracking
+            Track
           </button>
 
           <div className="gcl-nav-section-label">Finance</div>
@@ -105,7 +107,13 @@ export default function GclLayout({ children }) {
       </aside>
 
       {/* Content */}
-      <main className="gcl-main">{children}</main>
+      {/* Content */}
+      <main 
+        className="gcl-main" 
+        style={{ flex: 1, position: "relative", height: "100vh", overflow: "hidden", background: "transparent" }}
+      >
+        {children}
+      </main>
     </div>
   );
 }

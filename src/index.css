@@ -261,12 +261,6 @@ html, body, #root {
   background: rgba(148, 163, 184, 0.16);
 }
 
-.gcl-nav-item.active {
-  background: linear-gradient(135deg, #facc15, #f97316);
-  color: #111827;
-  box-shadow: 0 10px 22px rgba(250, 204, 21, 0.45);
-}
-
 .gcl-nav-item.logout {
   margin-top: 8px;
   color: #fecaca;
