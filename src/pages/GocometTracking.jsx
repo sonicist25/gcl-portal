@@ -398,7 +398,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
       setLoading(true);
       try {
         const API_BASE =
-          import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
+          import.meta.env.VITE_API_BASE_URL || "http://localhost";
 
         const res = await fetch(
           `${API_BASE}/api/track_gocomet?X-API-KEY=gateway-fms&si_number=${encodeURIComponent(
@@ -667,24 +667,20 @@ const mapBounds = useMemo(() => {
           }
         `}</style>
 
-      <div className="gocomet-top-bar">
-  <div className="gocomet-title-wrap">
-    <h2 className="page-title">Shipment Tracking</h2>
-    <p className="page-subtitle">Live tracking with arrival forecasts — concise, clear, and supply‑chain friendly.</p>
-  </div>
-
-  <form onSubmit={handleSubmit} className="search-inline" aria-label="Track shipment">
-    <input
-      value={inputSi}
-      onChange={(e) => setInputSi(e.target.value)}
-      placeholder="Enter HBL Number..."
-      className="si-input"
-    />
-    <button type="submit" disabled={loading} className="si-button">
-      {loading ? "Searching..." : "Track"}
-    </button>
-  </form>
-</div>
+        <div className="gocomet-top-bar">
+          <h2 className="page-title">Shipment Tracking</h2>
+          <form onSubmit={handleSubmit} className="search-inline">
+            <input
+              value={inputSi}
+              onChange={(e) => setInputSi(e.target.value)}
+              placeholder="Enter HBL Number..."
+              className="si-input"
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? "Searching..." : "Track"}
+            </button>
+          </form>
+        </div>
 
         {loading ? (
           <div className="loading-overlay">
@@ -1176,5 +1172,5 @@ const mapBounds = useMemo(() => {
     </GclLayout>
   );
 }
-console.log("GocometTracking build: AIS marker update 2026-05-05");
+
 export default GocometTracking;
