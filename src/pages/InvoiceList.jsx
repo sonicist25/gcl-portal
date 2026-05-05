@@ -53,13 +53,10 @@ function getInvoiceStatusMeta(rawStatus) {
 
 /** MODAL DETAIL INVOICE + FAKTUR PAJAK */
 function InvoiceDetailModal({ open, invoice, onClose }) {
-  // State untuk menangani proses loading saat menembak API faktur
-  const [isFetchingFaktur, setIsFetchingFaktur] = useState(false);
-
   if (!open || !invoice) return null;
 
-  const statusMeta = getInvoiceStatusMeta(invoice.status);
   const invoiceUrl = invoice.url || "";
+  const fakturUrl = invoice.faktur_url || null; // URL faktur hasil cek dari API
 
   const handleOpenInvoice = () => {
     if (invoiceUrl) {
@@ -67,48 +64,11 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
     }
   };
 
-  // Fungsi dinamis untuk memanggil API Faktur Pajak
-  const handleOpenFaktur = async () => {
-  try {
-    setIsFetchingFaktur(true);
-    const token = localStorage.getItem("gcl_access_token");
-
-    const invoiceNo = invoice.invoice_number || "";
-    const url = `${API_BASE}/api/faktur_pajak?invoice_no=${encodeURIComponent(invoiceNo)}&X-API-KEY=gateway-fms`;
-
-    const responseData = await apiFetch(url, {
-      method: "GET"
-    });
-
-    // responseData sudah berupa JSON, jadi kita langsung cek isinya
-    if (!responseData || !responseData.status) {
-      throw new Error(responseData.message || "Gagal mengambil data Faktur Pajak dari server.");
+  const handleOpenFaktur = () => {
+    if (fakturUrl) {
+      window.open(fakturUrl, "_blank", "noopener,noreferrer");
     }
-
-    const fakturDownloadUrl = responseData.data?.file_url;
-
-    if (fakturDownloadUrl) {
-      window.open(fakturDownloadUrl, "_blank", "noopener,noreferrer");
-    } else {
-      Swal.fire({
-        icon: "warning",
-        title: "File Tidak Ditemukan",
-        text: "File faktur tidak tersedia untuk nomor invoice ini.",
-        confirmButtonColor: "#3085d6"
-      });
-    }
-  } catch (err) {
-    console.error("Error fetching faktur:", err);
-    Swal.fire({
-      icon: "error",
-      title: "Terjadi Kesalahan",
-      text: err.message,
-      confirmButtonColor: "#d33"
-    });
-  } finally {
-    setIsFetchingFaktur(false);
-  }
-};
+  };
 
   return (
     <div className="gcl-modal-backdrop">
@@ -135,17 +95,6 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
 
         {/* BODY */}
         <div className="gcl-modal-body">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.1fr 0.9fr",
-              gap: "10px",
-              marginBottom: "12px",
-            }}
-          >
-          </div>
-
-          {/* Tombol aksi invoice & faktur pajak */}
           {/* ACTION BOX: Dokumen & Faktur */}
           <div
             style={{
@@ -154,10 +103,9 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
               alignItems: "center",
               flexWrap: "wrap",
               gap: "15px",
-              marginTop: "15px",
               marginBottom: "15px",
               padding: "16px 20px",
-              backgroundColor: "#f8fafc", // Warna background abu-abu kebiruan sangat soft
+              backgroundColor: "#f8fafc",
               border: "1px solid #e2e8f0",
               borderRadius: "8px",
             }}
@@ -167,7 +115,7 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
                 Dokumen Tagihan
               </h4>
               <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
-                Unduh invoice utama atau cari faktur pajak (e-Faktur) secara real-time.
+                Unduh invoice utama atau cetak faktur pajak (e-Faktur) jika tersedia.
               </p>
             </div>
 
@@ -197,43 +145,35 @@ function InvoiceDetailModal({ open, invoice, onClose }) {
                  Invoice PDF
               </button>
 
-              {/* TOMBOL 2: FAKTUR PAJAK DINAMIS (Emerald/Hijau) */}
-              <button
-                type="button"
-                className="gcl-btn"
-                onClick={handleOpenFaktur}
-                disabled={isFetchingFaktur}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  backgroundColor: isFetchingFaktur ? "#f59e0b" : "#10b981", // Amber saat loading, Hijau Emerald saat standby
-                  color: "#fff",
-                  fontWeight: "600",
-                  padding: "8px 16px",
-                  borderRadius: "6px",
-                  border: "none",
-                  boxShadow: isFetchingFaktur ? "none" : "0 4px 6px -1px rgba(16, 185, 129, 0.2)",
-                  cursor: isFetchingFaktur ? "wait" : "pointer",
-                  transition: "all 0.2s ease-in-out",
-                }}
-              >
-                {isFetchingFaktur ? (
-                  <>
-                    <FaSpinner size={16} className="fa-spin" /> {/* Pastikan class fa-spin ada di CSS global Anda, atau akan diam saja */}
-                    Mencari Faktur...
-                  </>
-                ) : (
-                  <>
-                    <FaFileAlt size={16} />
-                    Faktur Pajak
-                  </>
-                )}
-              </button>
+              {/* TOMBOL 2: FAKTUR PAJAK (Hanya muncul jika fakturUrl ada) */}
+              {fakturUrl && (
+                <button
+                  type="button"
+                  className="gcl-btn"
+                  onClick={handleOpenFaktur}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    backgroundColor: "#10b981",
+                    color: "#fff",
+                    fontWeight: "600",
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgba(16, 185, 129, 0.2)",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <FaFileAlt size={16} />
+                  Faktur Pajak
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Preview iframe (optional) */}
+          {/* Preview iframe */}
           {invoiceUrl && (
             <div
               style={{
@@ -272,31 +212,29 @@ function InvoiceList() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
+  
+  // State untuk melacak row mana yang sedang proses cek faktur pajak
+  const [fetchingDetailId, setFetchingDetailId] = useState(null);
 
-useEffect(() => {
+  useEffect(() => {
     const fetchInvoices = async () => {
       try {
         setLoading(true);
         setError("");
 
-        // 1. Langsung panggil apiFetch, tidak perlu cek token manual atau API_BASE
-        // (X-API-KEY juga sudah otomatis dikirim lewat header di dalam apiFetch)
         const responseData = await apiFetch("/invoice_api", {
           method: "GET"
         });
 
-        console.log("Invoice API response:", responseData);
-
-        // 2. Karena responseData sudah berupa JSON, kita tinggal cek isinya
         if (!responseData.status) {
           throw new Error(
             responseData.message || responseData.data?.message || "Gagal mengambil data invoice."
           );
         }
 
-        // 3. Ambil array datanya
         const list = Array.isArray(responseData.data?.data) ? responseData.data.data : [];
         setRows(list);
 
@@ -311,9 +249,33 @@ useEffect(() => {
     fetchInvoices();
   }, []);
 
-  const handleOpenDetail = (row) => {
-    setSelectedInvoice(row);
-    setShowDetail(true);
+  // Fungsi untuk membuka detail & mengecek faktur terlebih dahulu
+  const handleOpenDetail = async (row) => {
+    try {
+      setFetchingDetailId(row.invoice_number); // Aktifkan spinner di tabel
+
+      let fakturUrl = null;
+      try {
+        const invoiceNo = row.invoice_number || "";
+        const url = `${API_BASE}/faktur_pajak?invoice_no=${encodeURIComponent(invoiceNo)}&X-API-KEY=gateway-fms`;
+
+        const responseData = await apiFetch(url, { method: "GET" });
+
+        // Jika berhasil dan file_url ada isinya
+        if (responseData && responseData.status && responseData.data?.file_url) {
+          fakturUrl = responseData.data.file_url;
+        }
+      } catch (err) {
+        // Abaikan error di console, biarkan fakturUrl tetap null
+        console.warn("Faktur pajak tidak ditemukan:", err);
+      }
+
+      // Masukkan data row dan url faktur pajak (jika ada) ke state
+      setSelectedInvoice({ ...row, faktur_url: fakturUrl });
+      setShowDetail(true);
+    } finally {
+      setFetchingDetailId(null); // Matikan spinner
+    }
   };
 
   const handleCloseDetail = () => {
@@ -393,6 +355,8 @@ useEffect(() => {
 
                     {rows.map((row, idx) => {
                       const statusMeta = getInvoiceStatusMeta(row.status);
+                      const isFetching = fetchingDetailId === row.invoice_number;
+
                       return (
                         <tr key={`${row.invoice_number || "row"}-${idx}`}>
                           <td>{idx + 1}</td>
@@ -422,17 +386,28 @@ useEffect(() => {
                               : (row.aging != null ? `${row.aging} day(s)` : "-")}
                           </td>
                           <td style={{ textAlign: "center" }}>
+                            {/* Tombol Detail yang memiliki loading state */}
                             <button
                               type="button"
                               className="gcl-btn gcl-btn-sm gcl-btn-outline"
                               onClick={() => handleOpenDetail(row)}
+                              disabled={isFetching}
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "4px",
+                                cursor: isFetching ? "wait" : "pointer"
                               }}
                             >
-                              <FaInfoCircle /> Detail
+                              {isFetching ? (
+                                <>
+                                  <FaSpinner className="fa-spin" /> Loading...
+                                </>
+                              ) : (
+                                <>
+                                  <FaInfoCircle /> Detail
+                                </>
+                              )}
                             </button>
                           </td>
                         </tr>
