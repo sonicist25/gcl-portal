@@ -178,3 +178,20 @@
     display: none; /* Sembunyikan menu di mobile (perlu ditambahkan tombol hamburger nantinya jika dibutuhkan) */
   }
 }
+
+/* Animasi berkedip halus / napas */
+@keyframes pulse-skeleton {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Kotak abu-abu netral (cocok untuk Light/Dark Mode) */
+.gcl-skeleton-box {
+  background-color: rgba(148, 163, 184, 0.2); 
+  border-radius: 6px;
+  animation: pulse-skeleton 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

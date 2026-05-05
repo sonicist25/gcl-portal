@@ -314,13 +314,12 @@ function InvoiceList() {
           }}
         >
           <div style={{ flex: 1, overflow: "auto" }}>
-            {loading && <div className="gcl-loading">Loading invoice…</div>}
-
+            
             {error && (
               <div className="gcl-alert gcl-alert-error">{error}</div>
             )}
 
-            {!loading && !error && (
+            {!error && (
               <div
                 className="gcl-table-wrapper"
                 style={{ minHeight: "98%", overflow: "auto" }}
@@ -345,74 +344,86 @@ function InvoiceList() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.length === 0 && (
+                    {/* ========================================= */}
+                    {/* 1. TAMPILAN ANIMASI SKELETON SAAT LOADING */}
+                    {/* ========================================= */}
+                    {loading ? (
+                      [...Array(6)].map((_, i) => (
+                        <tr key={`skeleton-${i}`}>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "20px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "100px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "80px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "90px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "120px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "80px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "50px" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "80px" }}></div></td>
+                          <td style={{ textAlign: "center" }}><div className="gcl-skeleton-box" style={{ height: "24px", width: "60px", borderRadius: "12px", margin: "auto" }}></div></td>
+                          <td><div className="gcl-skeleton-box" style={{ height: "16px", width: "50px" }}></div></td>
+                          <td style={{ textAlign: "center" }}><div className="gcl-skeleton-box" style={{ height: "30px", width: "80px", margin: "auto" }}></div></td>
+                        </tr>
+                      ))
+                    ) : rows.length === 0 ? (
+                      /* ========================================= */
+                      /* 2. TAMPILAN JIKA DATA KOSONG              */
+                      /* ========================================= */
                       <tr>
                         <td colSpan={11} className="gcl-table-empty">
                           Tidak ada data invoice.
                         </td>
                       </tr>
+                    ) : (
+                      /* ========================================= */
+                      /* 3. TAMPILAN DATA ASLI (SELESAI LOADING)   */
+                      /* ========================================= */
+                      rows.map((row, idx) => {
+                        const statusMeta = getInvoiceStatusMeta(row.status);
+                        const isFetching = fetchingDetailId === row.invoice_number;
+
+                        return (
+                          <tr key={`${row.invoice_number || "row"}-${idx}`}>
+                            <td>{idx + 1}</td>
+                            <td className="gcl-col-booking-no">{row.invoice_number || "-"}</td>
+                            <td>{formatYmdToDmy(row.invoice_date)}</td>
+                            <td className="gcl-col-booking-no">{row.job_no || "-"}</td>
+                            <td className="gcl-col-booking-no">{row.hbl || "-"}</td>
+                            <td className="gcl-col-booking-no">{row.destination || "-"}</td>
+                            <td>{row.type || "-"}</td>
+                            <td>{formatYmdToDmy(row.atd)}</td>
+                            <td style={{ textAlign: "center" }}>
+                              <span className={statusMeta.className}>
+                                {statusMeta.label}
+                              </span>
+                            </td>
+                            <td>
+                              {statusMeta.label.toLowerCase() === "paid"
+                                ? "-" 
+                                : (row.aging != null ? `${row.aging} day(s)` : "-")}
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                type="button"
+                                className="gcl-btn gcl-btn-sm gcl-btn-outline"
+                                onClick={() => handleOpenDetail(row)}
+                                disabled={isFetching}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  cursor: isFetching ? "wait" : "pointer"
+                                }}
+                              >
+                                {isFetching ? (
+                                  <><FaSpinner className="fa-spin" /> Loading...</>
+                                ) : (
+                                  <><FaInfoCircle /> Detail</>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
-
-                    {rows.map((row, idx) => {
-                      const statusMeta = getInvoiceStatusMeta(row.status);
-                      const isFetching = fetchingDetailId === row.invoice_number;
-
-                      return (
-                        <tr key={`${row.invoice_number || "row"}-${idx}`}>
-                          <td>{idx + 1}</td>
-                          <td className="gcl-col-booking-no">
-                            {row.invoice_number || "-"}
-                          </td>
-                          <td>{formatYmdToDmy(row.invoice_date)}</td>
-                          <td className="gcl-col-booking-no">
-                            {row.job_no || "-"}
-                          </td>
-                          <td className="gcl-col-booking-no">
-                            {row.hbl || "-"}
-                          </td>
-                          <td className="gcl-col-booking-no">
-                            {row.destination || "-"}
-                          </td>
-                          <td>{row.type || "-"}</td>
-                          <td>{formatYmdToDmy(row.atd)}</td>
-                          <td style={{ textAlign: "center" }}>
-                            <span className={statusMeta.className}>
-                              {statusMeta.label}
-                            </span>
-                          </td>
-                          <td>
-                            {statusMeta.label.toLowerCase() === "paid"
-                              ? "-" 
-                              : (row.aging != null ? `${row.aging} day(s)` : "-")}
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            {/* Tombol Detail yang memiliki loading state */}
-                            <button
-                              type="button"
-                              className="gcl-btn gcl-btn-sm gcl-btn-outline"
-                              onClick={() => handleOpenDetail(row)}
-                              disabled={isFetching}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                cursor: isFetching ? "wait" : "pointer"
-                              }}
-                            >
-                              {isFetching ? (
-                                <>
-                                  <FaSpinner className="fa-spin" /> Loading...
-                                </>
-                              ) : (
-                                <>
-                                  <FaInfoCircle /> Detail
-                                </>
-                              )}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
                   </tbody>
                 </table>
               </div>
