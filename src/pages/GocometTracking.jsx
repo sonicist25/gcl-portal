@@ -1176,5 +1176,5 @@ const mapBounds = useMemo(() => {
     </GclLayout>
   );
 }
-
+console.log("GocometTracking build: AIS marker update 2026-05-05");
 export default GocometTracking;

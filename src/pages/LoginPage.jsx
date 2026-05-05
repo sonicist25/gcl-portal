@@ -118,6 +118,8 @@ function LoginPage() {
     { title: "Shipment List", image: "/Shipment List.jpg" },
     { title: "Tracking Cargo", image: "/Tracking.jpg" },
     { title: "Invoice & Tax", image: "/Invoice & Tax.jpg" },
+    { title: "Predictive ETA", image: "/Predictive.jpg" },
+    { title: "Shipment News", image: "/News.jpg" },
   ];
 
   // Menggandakan array agar animasi tidak terputus
