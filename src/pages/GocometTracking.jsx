@@ -401,7 +401,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
           import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
 
         const res = await fetch(
-          `${API_BASE}/api/track_gocomet?X-API-KEY=gateway-fms&si_number=${encodeURIComponent(
+          `${API_BASE}/track_gocomet?X-API-KEY=gateway-fms&si_number=${encodeURIComponent(
             activeSi
           )}`
         );
