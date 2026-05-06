@@ -42,7 +42,7 @@ async function ensureAuth() {
 
 function getTrackingStatusMeta(rawStatus) {
   const s = (rawStatus || "").trim();
-  if (!s) return { label: "Not Tracked", className: "gcl-pill-status gcl-pill-status-none" };
+  if (!s) return { label: "Not Tracked Yet", className: "gcl-pill-status gcl-pill-status-none" };
   const u = s.toUpperCase();
   if (u === "ACTIVE") return { label: "Active", className: "gcl-pill-status gcl-pill-status-active" };
   if (u === "DELAYED" || u === "DELAY") return { label: "Delayed", className: "gcl-pill-status gcl-pill-status-delayed" };

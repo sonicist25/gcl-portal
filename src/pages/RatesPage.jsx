@@ -4,6 +4,7 @@ import {
   Boxes,
   CalendarDays,
   ChevronDown,
+  Clock, // <-- 1. TAMBAHKAN IMPORT CLOCK
   DollarSign,
   Eye,
   Filter,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 
 import GclLayout from "../layouts/GclLayout";
-import QuoteRequestModal from "./QuoteRequestModal"; // Pastikan path ini sesuai
+import QuoteRequestModal from "./QuoteRequestModal";
 
 // ==============================================================================
 // 1. UTILS & BUSINESS LOGIC
@@ -33,26 +34,23 @@ function clean(v, fallback = "-") {
   return s;
 }
 
-// Aturan 1, 2, 3, 4 untuk LCL
 function calcLcl(v) {
   if (v === null || v === undefined || v === "") return null;
   let n = Number(v);
   if (isNaN(n)) return null;
 
-  if (n < 0) return "FREE"; // Aturan 3: Lcl minus -> FREE
-  if (n === 0) return 2;    // Aturan 2: Lcl 0 -> 2 dollars
-  return n * 1.2;           // Aturan 1: Naik 20%
+  if (n < 0) return "FREE";
+  if (n === 0) return 2;    
+  return n * 1.2;           
 }
 
-// Aturan 1, 4 untuk FCL
 function calcFcl(v) {
   if (v === null || v === undefined || v === "") return null;
   let n = Number(v);
-  if (isNaN(n) || n <= 0) return null; // Aturan 4: Jika 0 tampilkan "-" (dijadikan null agar dirender -)
-  return n * 1.2;                      // Aturan 1: Naik 20%
+  if (isNaN(n) || n <= 0) return null; 
+  return n * 1.2;                      
 }
 
-// Aturan 1, 4 untuk Air
 function calcAir(v) {
   if (v === null || v === undefined || v === "") return null;
   let n = Number(v);
@@ -60,7 +58,6 @@ function calcAir(v) {
   return n * 1.2;
 }
 
-// Format Uang LCL/FCL (USD) atau Air (IDR)
 function money(v, isIDR = false) {
   if (v === "FREE") return "FREE";
   if (v === null || v === undefined || v === "") return "-";
@@ -180,22 +177,37 @@ function SearchInput({ value, onChange }) {
   );
 }
 
+// 2. UPDATE LCL PREVIEW: Tampilkan Priority, Harga, Route dan Transit Time
 function LclPreview({ rate }) {
   const count = Number(rate.lcl_count || 0);
-  const price = rate.min_lcl_price; // Sudah di markup di level parser
+  const price = rate.lcl_price; // Telah disesuaikan dari loadPricing
+  const isPriority = Number(rate.lcl_is_priority) === 1;
 
   if (!count || price === null || price === undefined) {
     return <span className="text-slate-500">-</span>;
   }
 
   return (
-    <div className="leading-tight">
-      {count > 1 && <div className="text-[10px] uppercase tracking-wider text-slate-500">mulai dari</div>}
+    <div className="flex flex-col items-end leading-tight text-right">
+      {isPriority && (
+        <span className="mb-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400">PRIORITY</span>
+      )}
+      {!isPriority && count > 1 && (
+        <div className="text-[10px] uppercase tracking-wider text-slate-500">mulai dari</div>
+      )}
+      
       <div className={clsx("font-bold", price === "FREE" ? "text-amber-300" : "text-cyan-300")}>
         {price === "FREE" ? "FREE" : money(price)}
         {price !== "FREE" && <span className="ml-1 text-amber-300">*</span>}
       </div>
-      {rate.min_lcl_type_name && <div className="mt-1 text-[11px] text-slate-500">{rate.min_lcl_type_name}</div>}
+      
+      {rate.lcl_type_name && <div className="mt-1 text-[11px] text-slate-500">{rate.lcl_type_name}</div>}
+      
+      {rate.lcl_transit_time && (
+        <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+          <Clock className="h-3 w-3" /> {rate.lcl_transit_time}
+        </div>
+      )}
     </div>
   );
 }
@@ -242,8 +254,11 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
   const lclRaw = Array.isArray(detail?.lcl) ? detail.lcl : [];
   const dataRaw = detail?.data || {};
 
-  // Terapkan markup LCL dan FCL di komponen detail
-  const validLcl = lclRaw.map(x => ({ ...x, price: calcLcl(x.price) })).filter((x) => x?.price !== null);
+  // UPDATE DI SINI: Tambahkan .slice(0, 1) untuk hanya mengambil 1 data teratas
+  const validLcl = lclRaw
+    .map(x => ({ ...x, price: calcLcl(x.price) }))
+    .filter((x) => x?.price !== null)
+    .slice(0, 1); // <--- Baris ini yang ditambahkan
   
   const componentGroups = Object.entries(dataRaw).map(([groupName, rows]) => {
     return [
@@ -336,10 +351,22 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
                       <th className="px-4 py-4 text-right">20'</th>
                       <th className="px-4 py-4 text-right">40'</th>
                       <th className="px-4 py-4 text-right">40'HC</th>
+                      
+                      {/* 3. UPDATE LCL HEADER DI MODAL DETAIL */}
                       {validLcl.map((item) => (
                         <th key={item.id} className="px-4 py-4 text-right text-cyan-300">
-                          LCL
-                          <div className="text-[10px] normal-case tracking-normal text-slate-500">{item.type_name}</div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span>LCL</span>
+                            <span className="text-[10px] normal-case tracking-normal text-slate-500">{item.type_name}</span>
+                            {Number(item.is_priority) === 1 && (
+                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400 uppercase">Priority</span>
+                            )}
+                            {item.transit_time && (
+                              <span className="flex items-center gap-1 text-[10px] normal-case tracking-normal text-slate-400">
+                                <Clock className="h-3 w-3" /> {item.transit_time}
+                              </span>
+                            )}
+                          </div>
                         </th>
                       ))}
                     </tr>
@@ -378,11 +405,13 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
                 </table>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* 4. TAMBAHKAN KOTAK INFO FCL TRANSIT TIME */}
+              <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+                <InfoBox title="FCL Transit Time" tone="cyan" content={header.transit_time} />
+                <InfoBox title="Free Time D&D" tone="cyan" content={header.free_time} />
                 <InfoBox title="Include of Rate" tone="emerald" content={header.include_rate} />
                 <InfoBox title="Exclude of Rate" tone="rose" content={header.exclude_rate} />
                 <InfoBox title="Remarks" tone="amber" content={header.inland_moda} />
-                <InfoBox title="Free Time D&D" tone="cyan" content={header.free_time} />
               </div>
             </>
           )}
@@ -397,19 +426,17 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
 // ==============================================================================
 
 export default function PricingPage() {
-  const [tab, setTab] = useState("sea"); // "sea" | "air"
+  const [tab, setTab] = useState("sea"); 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
   const [seaGroups, setSeaGroups] = useState([]);
   const [airGroups, setAirGroups] = useState([]);
 
-  // Filters
   const [search, setSearch] = useState("");
   const [cargoType, setCargoType] = useState("");
   const [sortBy, setSortBy] = useState("route_asc");
 
-  // Modals
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
@@ -418,13 +445,11 @@ export default function PricingPage() {
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
   const [quoteData, setQuoteData] = useState(null);
 
-  // Fetch Logic
   async function loadPricing() {
     try {
       setLoading(true);
       setErr("");
 
-      // 1. Fetch Sea Rates
       const seaRes = await fetch("https://gateway-cl.com/api/crm/pricing?X-API-KEY=gateway-fms").then(r => r.json());
       const parsedSea = [];
       Object.entries(seaRes?.data || {}).forEach(([route, rates]) => {
@@ -432,7 +457,8 @@ export default function PricingPage() {
           route,
           rates: rates.map((r) => ({
             ...r,
-            min_lcl_price: calcLcl(r.min_lcl_price),
+            // 5. PASTIKAN MAP PROPERTY BARU lcl_price BUKAN min_lcl_price
+            lcl_price: calcLcl(r.lcl_price), 
             prices: {
               "20": calcFcl(r?.prices?.["20"]),
               "40": calcFcl(r?.prices?.["40"]),
@@ -443,7 +469,6 @@ export default function PricingPage() {
       });
       setSeaGroups(parsedSea.sort((a, b) => a.route.localeCompare(b.route)));
 
-      // 2. Fetch Air Rates
       const airRes = await fetch("https://gateway-cl.com/api/feeder_rate?X-API-KEY=gateway-fms").then(r => r.json());
       const airMap = {};
       (airRes?.data?.air || []).forEach((r) => {
@@ -473,8 +498,6 @@ export default function PricingPage() {
     loadPricing();
   }, []);
 
-  // Open Sea Detail Modal
-// Open Sea Detail Modal
   async function openDetail(rate, routeName) {
     try {
       setDetailOpen(true);
@@ -485,8 +508,6 @@ export default function PricingPage() {
       const formData = new URLSearchParams();
       formData.append("rate_id", rate.id);
 
-      console.log("1. Mengirim POST request untuk rate_id:", rate.id);
-
       const response = await fetch("https://gateway-cl.com/api/crm/pricing/details", {
         method: "POST",
         headers: {
@@ -496,41 +517,31 @@ export default function PricingPage() {
         body: formData,
       });
 
-      console.log("2. HTTP Status:", response.status);
-
-      // Ambil respons sebagai teks mentah untuk melihat apakah ada pesan error dari PHP
       const rawText = await response.text();
-      console.log("3. Raw Response dari Server:", rawText);
-
-      // Coba parse ke JSON
       let json;
       try {
         json = JSON.parse(rawText);
       } catch (err) {
-        throw new Error("Respons server bukan JSON valid. Cek tab Console untuk melihat respons asli dari PHP.");
+        throw new Error("Respons server bukan JSON valid.");
       }
 
       if (json?.status !== "success") {
-        throw new Error(json?.message || "Failed to load detail (API status not success)");
+        throw new Error(json?.message || "Failed to load detail");
       }
 
-      // Jika berhasil
       setDetail({ ...json, routeName });
     } catch (e) {
-      console.error("4. Error tertangkap:", e);
       setDetailError(e?.message || "Terjadi kesalahan saat memuat detail");
     } finally {
       setDetailLoading(false);
     }
   }
 
-  // Open Air Quote Modal
   function handleOpenQuote(rate) {
     setQuoteData({ ...rate, serviceType: "Airfreight" });
     setQuoteModalOpen(true);
   }
 
-  // Memoized Filter Options & Lists
   const activeGroups = tab === "sea" ? seaGroups : airGroups;
 
   const cargoOptions = useMemo(() => {
@@ -592,7 +603,6 @@ export default function PricingPage() {
 
             <div className="relative z-10">
               
-              {/* HEADER */}
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-medium text-cyan-200">
@@ -615,7 +625,6 @@ export default function PricingPage() {
                 </button>
               </div>
 
-              {/* TABS */}
               <div className="mt-6 flex flex-wrap gap-3">
                 <TabButton active={tab === "sea"} onClick={() => setTab("sea")} icon={Ship}>
                   Sea Rates (FCL/LCL)
@@ -625,7 +634,6 @@ export default function PricingPage() {
                 </TabButton>
               </div>
 
-              {/* FILTERS */}
               <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.05] p-4 backdrop-blur-xl">
                 <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
                   <Filter className="h-4 w-4 text-cyan-200" /> Filters
@@ -652,7 +660,6 @@ export default function PricingPage() {
 
               {err && <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{err}</div>}
 
-              {/* SUMMARY CARDS */}
               <div className="mt-6 grid gap-4 md:grid-cols-4">
                 <SummaryCard icon={Route} label="Routes" value={summary.routes} hint="Visible route groups" tone="cyan" />
                 <SummaryCard icon={tab === "sea" ? Ship : Plane} label="Rates" value={summary.totalRates} hint="Visible offers" tone="emerald" />
@@ -660,7 +667,6 @@ export default function PricingPage() {
                 <SummaryCard icon={Package} label={summary.extraLabel} value={summary.extraValue} hint="Available" tone="amber" />
               </div>
 
-              {/* TABLE AREA */}
               <div className="mt-6 rounded-[32px] border border-white/10 bg-white/[0.05] p-5 shadow-2xl shadow-black/20 backdrop-blur-xl">
                 <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -698,7 +704,6 @@ export default function PricingPage() {
                         </div>
 
                         <div className="overflow-x-auto">
-                          {/* TAB: SEA RATES */}
                           {tab === "sea" && (
                             <table className="w-full min-w-[1050px] border-collapse text-sm">
                               <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
@@ -706,6 +711,8 @@ export default function PricingPage() {
                                   <th className="px-4 py-4 text-left">Liner</th>
                                   <th className="px-4 py-4 text-center">Type</th>
                                   <th className="px-4 py-4 text-center">Validity</th>
+                                  {/* 6. TAMBAH HEADER FCL TRANSIT DI SINI */}
+                                  <th className="px-4 py-4 text-center text-info">FCL Transit</th>
                                   <th className="px-4 py-4 text-right">20' All-In</th>
                                   <th className="px-4 py-4 text-right">40' All-In</th>
                                   <th className="px-4 py-4 text-right">40'HC All-In</th>
@@ -737,6 +744,10 @@ export default function PricingPage() {
                                         {formatDate(rate.validity_period)}
                                       </span>
                                     </td>
+                                    {/* 7. MAP VALUE FCL TRANSIT TIME DI SINI */}
+                                    <td className="px-4 py-4 text-center font-semibold text-slate-300">
+                                      {clean(rate.fcl_transit_time)}
+                                    </td>
                                     <td className="px-4 py-4 text-right font-mono font-bold text-emerald-300">{money(rate.prices["20"])}</td>
                                     <td className="px-4 py-4 text-right font-mono font-bold text-emerald-300">{money(rate.prices["40"])}</td>
                                     <td className="px-4 py-4 text-right font-mono font-bold text-emerald-300">{money(rate.prices["40HC"])}</td>
@@ -755,8 +766,8 @@ export default function PricingPage() {
                             </table>
                           )}
 
-                          {/* TAB: AIR RATES */}
                           {tab === "air" && (
+                            //... (KODE TABEL AIR TETAP SAMA)
                             <table className="w-full min-w-[1250px] border-collapse text-sm">
                               <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
                                 <tr>
@@ -834,7 +845,6 @@ export default function PricingPage() {
         detail={detail}
       />
 
-      {/* Modal Eksternal untuk Air Quotes */}
       <QuoteRequestModal
         isOpen={quoteModalOpen}
         onClose={() => setQuoteModalOpen(false)}
