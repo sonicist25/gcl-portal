@@ -186,6 +186,19 @@ function LoginPage() {
 
   return (
     <div className="gcl-auth-wrapper">
+      {/* --- TAMBAHKAN KODE INI (SHORTCUT MENU PUBLIK) --- */}
+      <div className="gcl-login-quicklinks">
+        <button onClick={() => navigate('/schedule')} className="gcl-quick-btn">
+          Ship Schedule
+        </button>
+        <button onClick={() => navigate('/rates')} className="gcl-quick-btn">
+          Rates / Tariff
+        </button>
+        <button onClick={() => navigate('/tracking')} className="gcl-quick-btn">
+          Tracking
+        </button>
+      </div>
+      {/* ----------------------------------------------- */}
       
       {/* Background Cards ala Netflix */}
       <div className="gcl-cards-bg">

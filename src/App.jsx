@@ -8,10 +8,6 @@ import QuotationList from "./pages/QuotationList";
 import QuotationDetail from "./pages/QuotationDetail";
 import BookingPage from "./pages/BookingPage";
 import InvoiceList from "./pages/InvoiceList";
-
-// PERHATIKAN: Cek lokasi file GocometTracking anda.
-// Jika file ada di folder "src/components/", ubah import di bawah ini menjadi:
-// import GocometTracking from "./components/GocometTracking";
 import GocometTracking from "./pages/GocometTracking"; 
 
 function RequireAuth({ children }) {
@@ -26,31 +22,24 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* ==========================================
+            RUTE PUBLIK (Bisa diakses TANPA Login)
+            ========================================== */}
         <Route path="/login" element={<LoginPage />} />
+        
+        {/* Lepas bungkus <RequireAuth> di 3 halaman ini */}
+        <Route path="/schedule" element={<SchedulePage />} />
+        <Route path="/rates" element={<RatesPage />} />
+        <Route path="/tracking" element={<GocometTracking />} />
 
+        {/* ==========================================
+            RUTE PRIVAT (Wajib Login)
+            ========================================== */}
         <Route
           path="/dashboard"
           element={
             <RequireAuth>
               <DashboardPage />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/schedule"
-          element={
-            <RequireAuth>
-              <SchedulePage />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/rates"
-          element={
-            <RequireAuth>
-              <RatesPage />
             </RequireAuth>
           }
         />
@@ -82,16 +71,6 @@ function App() {
           }
         />
 
-        {/* PERBAIKAN DI SINI: Ubah "/trackings" menjadi "/tracking" */}
-        <Route
-          path="/tracking" 
-          element={
-            <RequireAuth>
-              <GocometTracking />
-            </RequireAuth>
-          }
-        />
-
         <Route
           path="/invoices"
           element={
@@ -101,6 +80,7 @@ function App() {
           }
         />
 
+        {/* Redirect default */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

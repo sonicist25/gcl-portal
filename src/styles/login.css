@@ -417,7 +417,6 @@
 
 /* Menyembunyikan input range bawaan browser */
 .gcl-slider-input {
-  -webkit-appearance: none;
   width: 100%;
   height: 100%;
   background: transparent;
@@ -487,4 +486,61 @@
 @keyframes scrollRight {
   0% { transform: translateX(-50%); }
   100% { transform: translateX(0); }
+}
+
+/* =========================================
+   QUICK LINKS (SHORTCUT PUBLIK) DI HEADER
+   ========================================= */
+.gcl-login-quicklinks {
+  position: absolute;
+  top: 2.5rem;
+  right: 3rem;
+  z-index: 10;
+  display: flex;
+  gap: 1rem;
+  animation: modalPop 0.5s ease-out forwards; /* Menggunakan animasi yang sudah ada */
+}
+
+.gcl-quick-btn {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.gcl-quick-btn:hover {
+  background: #0056b3; /* Berubah menjadi Biru Gateway saat disorot */
+  border-color: #0056b3;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 86, 179, 0.4);
+}
+
+/* Responsif: Di layar HP, tombol geser ke tengah atas dan menyusut */
+@media (max-width: 768px) {
+  .gcl-login-quicklinks {
+    top: 1.5rem;
+    right: 0;
+    left: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 1rem;
+  }
+  
+  .gcl-quick-btn {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    flex: 1; /* Membuat tombol sejajar rata di layar sempit */
+    min-width: 100px;
+  }
 }

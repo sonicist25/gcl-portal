@@ -191,19 +191,24 @@ function BookingList() {
     );
   });
 
-  return (
+ return (
     <GclLayout>
-      <div className="gcl-page">
+      {/* KUNCI 1: Halaman diset persis 100% tinggi layar */}
+      <div 
+        className="gcl-page" 
+        style={{ padding: "24px 32px", boxSizing: "border-box", height: "100vh", overflow: "hidden" }}
+      >
+        
         {/* HEADER PAGE */}
         <div
           className="gcl-page-header"
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}
         >
           <div className="gcl-page-header-main">
-            <h1 className="gcl-page-title">Booking List</h1>
-            <p className="gcl-page-subtitle">Daftar booking dan pengiriman terbaru Anda</p>
+            <h1 className="gcl-page-title" style={{ margin: 0, fontSize: "1.8rem", color: "#fff" }}>Booking List</h1>
+            <p className="gcl-page-subtitle" style={{ margin: "4px 0 0 0", color: "#94a3b8" }}>Daftar booking dan pengiriman terbaru Anda</p>
           </div>
-          <div className="gcl-page-header-actions" style={{ paddingRight: "16px", paddingTop: "20px" }}>
+          <div className="gcl-page-header-actions">
             <button
               type="button"
               className="gcl-btn gcl-btn-primary"
@@ -217,12 +222,26 @@ function BookingList() {
 
         {/* CARD LIST */}
         <div
-          className="gcl-card"
-          style={{ marginTop: "20px", height: "calc(100vh - 160px)", display: "flex", flexDirection: "column" }}
+          className="gcl-modern-card"
+          style={{ 
+            height: "calc(100vh - 130px)", /* KUNCI UTAMA: Paksa tinggi kotak menggunakan rumus matematika agar menyentuh bawah layar */
+            display: "flex", 
+            flexDirection: "column", 
+            background: "rgba(30, 41, 59, 0.7)", 
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+            overflow: "hidden"
+          }}
         >
           
-          {/* --- 3. BAR GLOBAL SEARCH --- */}
-          <div style={{ padding: "16px", borderBottom: "1px solid rgba(255,255,255,0.1)", background: "rgba(15, 23, 42, 0.4)" }}>
+          {/* --- BAR GLOBAL SEARCH --- */}
+          <div style={{ 
+            padding: "16px", 
+            borderBottom: "1px solid rgba(255,255,255,0.1)", 
+            background: "rgba(15, 23, 42, 0.6)",
+            flexShrink: 0 /* Cegah search bar menyusut */
+          }}>
             <div style={{ position: "relative", maxWidth: "400px" }}>
               <FaSearch style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
               <input 
@@ -239,83 +258,84 @@ function BookingList() {
             </div>
           </div>
 
-          <div style={{ flex: 1, overflow: "auto" }}>
-            {loading && <div className="gcl-loading">Loading booking…</div>}
-            {error && <div className="gcl-alert gcl-alert-error">{error}</div>}
+          {/* --- AREA TABEL --- */}
+          {/* KUNCI 2: Flex 1 agar area scroll ini mengisi penuh sisa tinggi kotak (Card) */}
+          <div style={{ flex: 1, overflow: "auto", background: "rgba(15, 23, 42, 0.3)" }}>
+            {loading && <div className="gcl-loading" style={{ padding: "20px", color: "#fff" }}>Loading booking…</div>}
+            {error && <div className="gcl-alert gcl-alert-error" style={{ padding: "20px" }}>{error}</div>}
 
             {!loading && !error && (
-              <div className="gcl-table-wrapper" style={{ minHeight: "98%", overflow: "auto" }}>
-                <table className="gcl-table gcl-table-striped gcl-table-hover" style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
+              <table className="gcl-table gcl-table-striped gcl-table-hover" style={{ width: "100%", minWidth: "1000px", borderCollapse: "collapse" }}>
+                
+                {/* KUNCI 3: Sticky header agar judul kolom tidak hilang saat di-scroll ke bawah */}
+                <thead style={{ position: "sticky", top: 0, zIndex: 10, background: "#0f172a", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+                  <tr>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>No</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Booking No</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>BL No</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Meass</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>ETD</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>ETA</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Vessel</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Route</th>
+                    <th style={{ padding: "14px 16px", textAlign: "center", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Tracking</th>
+                    <th style={{ padding: "14px 16px", textAlign: "center", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.length === 0 && (
                     <tr>
-                      <th>No</th>
-                      <th>Booking No</th>
-                      <th>BL No</th>
-                      <th>Meass</th>
-                      <th>ETD</th>
-                      <th>ETA</th>
-                      <th>Vessel</th>
-                      <th>Route</th>
-                      <th style={{ textAlign: "center" }}>Tracking</th>
-                      <th style={{ textAlign: "center" }}>Detail</th>
+                      <td colSpan={10} className="gcl-table-empty" style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
+                        {searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Tidak ada data booking."}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {/* --- 4. RENDER DATA YANG SUDAH DIFILTER --- */}
-                    {filteredRows.length === 0 && (
-                      <tr>
-                        <td colSpan={10} className="gcl-table-empty">
-                          {searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Tidak ada data booking."}
+                  )}
+                  {filteredRows.map((row, idx) => {
+                    const trackingMeta = getTrackingStatusMeta(row.status_gocomet);
+                    return (
+                      <tr key={`${row.no_from_shipper || "row"}-${idx}`}>
+                        <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{idx + 1}</td>
+                        <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", fontWeight: "600" }}>{row.no_from_shipper || "-"}</td>
+                        <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{row.hbl || "-"}</td>
+                        <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{row.measurement || "-"}</td>
+                        <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{formatDate(row.etd_jkt)}</td>
+                        <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{formatDate(row.eta)}</td>
+                        <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{row.feeder_vessel || "-"}</td>
+                        <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                          {row.origin && row.destination ? `${row.origin} - ${row.destination}` : "-"}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                            {row.hbl  ? (
+                                <Link 
+                                    to={`/tracking?si_number=${encodeURIComponent(row.hbl)}`}
+                                    className="gcl-tracking-link"
+                                    title="Click to Track"
+                                >
+                                    <span className={`${trackingMeta.className} hover-scale`}>
+                                        {trackingMeta.label} ↗
+                                    </span>
+                                </Link>
+                            ) : (
+                                <span className={trackingMeta.className}>
+                                    {trackingMeta.label}
+                                </span>
+                            )}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                            <button
+                              type="button"
+                              className="gcl-btn gcl-btn-sm gcl-btn-outline"
+                              onClick={() => handleDetail(row)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "transparent", color: "#94a3b8", border: "1px solid #475569", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" }}
+                            >
+                              <FaInfoCircle /> Detail
+                            </button>
                         </td>
                       </tr>
-                    )}
-                    {filteredRows.map((row, idx) => {
-                      const trackingMeta = getTrackingStatusMeta(row.status_gocomet);
-                      return (
-                        <tr key={`${row.no_from_shipper || "row"}-${idx}`}>
-                          <td>{idx + 1}</td>
-                          <td className="gcl-col-booking-no">{row.no_from_shipper || "-"}</td>
-                          <td className="gcl-col-booking-no">{row.hbl || "-"}</td>
-                          <td className="gcl-col-booking-no">{row.measurement || "-"}</td>
-                          <td>{formatDate(row.etd_jkt)}</td>
-                          <td>{formatDate(row.eta)}</td>
-                          <td className="gcl-col-booking-no">{row.feeder_vessel || "-"}</td>
-                          <td className="gcl-col-booking-no">
-                            {row.origin && row.destination ? `${row.origin} - ${row.destination}` : "-"}
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                              {row.hbl  ? (
-                                  <Link 
-                                      to={`/tracking?si_number=${encodeURIComponent(row.hbl)}`}
-                                      className="gcl-tracking-link"
-                                      title="Click to Track"
-                                  >
-                                      <span className={`${trackingMeta.className} hover-scale`}>
-                                          {trackingMeta.label} ↗
-                                      </span>
-                                  </Link>
-                              ) : (
-                                  <span className={trackingMeta.className}>
-                                      {trackingMeta.label}
-                                  </span>
-                              )}
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                              <button
-                                type="button"
-                                className="gcl-btn gcl-btn-sm gcl-btn-outline"
-                                onClick={() => handleDetail(row)}
-                                style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                              >
-                                <FaInfoCircle /> Detail
-                              </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
