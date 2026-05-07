@@ -189,13 +189,13 @@ function LoginPage() {
       {/* --- TAMBAHKAN KODE INI (SHORTCUT MENU PUBLIK) --- */}
       <div className="gcl-login-quicklinks">
         <button onClick={() => navigate('/schedule')} className="gcl-quick-btn">
-          Ship Schedule
+          Ship Schedules
         </button>
         <button onClick={() => navigate('/rates')} className="gcl-quick-btn">
-          Rates / Tariff
+          Explore Rates
         </button>
         <button onClick={() => navigate('/tracking')} className="gcl-quick-btn">
-          Tracking
+          Track Shipment
         </button>
       </div>
       {/* ----------------------------------------------- */}
