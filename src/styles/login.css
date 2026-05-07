@@ -364,14 +364,14 @@
 }
 
 /* =========================================
-   SLIDER CAPTCHA (GESER)
+   SLIDER CAPTCHA (FIX OVERLAP)
    ========================================= */
 .gcl-slide-captcha {
   position: relative;
   width: 100%;
   height: 52px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1e293b; /* Warna latar belakang lintasan */
+  border: 1px solid #334155;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   overflow: hidden;
@@ -390,24 +390,23 @@
   left: 0;
   top: 0;
   height: 100%;
-  background: rgba(74, 144, 226, 0.3); /* Warna biru transparan mengisi background */
+  background: rgba(59, 130, 246, 0.2); /* Warna biru pengisi lintasan saat ditarik */
   pointer-events: none;
-  transition: width 0.1s linear;
+  z-index: 1;
 }
 
 .gcl-slide-captcha.verified .gcl-slide-fill {
   background: rgba(16, 185, 129, 0.2);
-  transition: background 0.3s ease;
 }
 
 .gcl-slide-text {
   position: absolute;
-  color: #a3a3a3;
+  color: #94a3b8;
   font-size: 0.9rem;
-  pointer-events: none;
-  z-index: 1;
   font-weight: 500;
-  transition: color 0.3s ease;
+  z-index: 2; /* Teks di atas fill, tapi di bawah tombol geser */
+  pointer-events: none; /* KUNCI: Agar teks tidak memblokir jari saat menggeser */
+  user-select: none;
 }
 
 .gcl-slide-captcha.verified .gcl-slide-text {
@@ -415,15 +414,31 @@
   font-weight: 700;
 }
 
-/* Menyembunyikan input range bawaan browser */
+/* Mematikan style lintasan (track) bawaan browser secara paksa */
 .gcl-slider-input {
+  -webkit-appearance: none !important;
+  appearance: none !important;
   width: 100%;
   height: 100%;
-  background: transparent;
+  background: transparent !important; /* WAJIB TRANSPARAN */
   position: absolute;
-  z-index: 2;
+  z-index: 10; /* Tombol geser harus paling atas */
   outline: none;
   margin: 0;
+  cursor: pointer;
+}
+
+/* Mematikan track garis di Chrome/Safari */
+.gcl-slider-input::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+}
+
+/* Mematikan track garis di Firefox */
+.gcl-slider-input::-moz-range-track {
+  background: transparent;
+  border: none;
 }
 
 /* Desain Kotak yang Digeser (Thumb) */
@@ -431,22 +446,17 @@
   -webkit-appearance: none;
   width: 52px;
   height: 52px;
-  background: #4a90e2; /* Biru Gateway */
-  cursor: pointer;
+  background-color: #3b82f6; 
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0,0,0,0.5);
-  /* Ikon Panah Kanan berbasis SVG murni (tidak butuh gambar eksternal) */
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>');
   background-repeat: no-repeat;
   background-position: center;
-  transition: background-color 0.3s;
 }
 
-/* Perubahan Thumb saat berhasil diverifikasi */
 .gcl-slider-input.verified::-webkit-slider-thumb {
-  background-color: #10b981; /* Hijau sukses */
+  background-color: #10b981;
   cursor: default;
-  /* Ikon Centang */
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>');
 }
 

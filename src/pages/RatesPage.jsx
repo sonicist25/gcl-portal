@@ -192,10 +192,6 @@ function LclPreview({ rate }) {
       {isPriority && (
         <span className="mb-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400">PRIORITY</span>
       )}
-      {!isPriority && count > 1 && (
-        <div className="text-[10px] uppercase tracking-wider text-slate-500">mulai dari</div>
-      )}
-      
       <div className={clsx("font-bold", price === "FREE" ? "text-amber-300" : "text-cyan-300")}>
         {price === "FREE" ? "FREE" : money(price)}
         {price !== "FREE" && <span className="ml-1 text-amber-300">*</span>}
@@ -334,12 +330,12 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
                   <p className="mt-2 font-semibold text-white">{clean(header.free_time)}</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Transit / Remarks</p>
-                  <p className="mt-2 font-semibold text-white">{clean(header.inland_moda)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Transit Time</p>
+                  <p className="mt-2 font-semibold text-white">{clean(header.transit_time)}</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Created At</p>
-                  <p className="mt-2 font-semibold text-white">{clean(header.created_at)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Remarks</p>
+                  <p className="mt-2 font-semibold text-white">{clean(header.inland_moda)}</p>
                 </div>
               </div>
 
@@ -406,12 +402,9 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
               </div>
 
               {/* 4. TAMBAHKAN KOTAK INFO FCL TRANSIT TIME */}
-              <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-                <InfoBox title="FCL Transit Time" tone="cyan" content={header.transit_time} />
-                <InfoBox title="Free Time D&D" tone="cyan" content={header.free_time} />
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
                 <InfoBox title="Include of Rate" tone="emerald" content={header.include_rate} />
                 <InfoBox title="Exclude of Rate" tone="rose" content={header.exclude_rate} />
-                <InfoBox title="Remarks" tone="amber" content={header.inland_moda} />
               </div>
             </>
           )}
