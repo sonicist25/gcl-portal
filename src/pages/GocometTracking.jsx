@@ -407,12 +407,6 @@ function GocometTracking({ defaultSiNumber = "" }) {
         );
 
         const json = await res.json();
-        console.log("FULL JSON FROM BROWSER:", JSON.stringify(json, null, 2));
-console.log("ROOT KEYS:", Object.keys(json || {}));
-console.log("json.ais_current:", json?.ais_current);
-console.log("json.ais_history:", json?.ais_history);
-console.log("json.data?.ais_current:", json?.data?.ais_current);
-console.log("json.data?.ais_history:", json?.data?.ais_history);
         setData(json);
       } catch (e) {
         console.error(e);
@@ -490,73 +484,75 @@ console.log("json.data?.ais_history:", json?.data?.ais_history);
     fetchCoords();
   }, [data]);
 
-const headerObj = data?.header?.[0]?.[0] || data?.header?.[0] || null;
-const aisCurrentPoint = useMemo(() => getAisCurrentPoint(data), [data]);
-const aisHistoryPath = useMemo(() => getAisHistoryPoints(data), [data]);
-const polPoint = useMemo(() => parsePointString(headerObj?.pol_point), [headerObj]);
-const podPoint = useMemo(() => parsePointString(headerObj?.pod_point), [headerObj]);
-const potPoint = useMemo(() => parsePointString(headerObj?.pot_point), [headerObj]);
+  const headerObj = data?.header?.[0]?.[0] || data?.header?.[0] || null;
+  const aisCurrentPoint = useMemo(() => getAisCurrentPoint(data), [data]);
+  const aisHistoryPath = useMemo(() => getAisHistoryPoints(data), [data]);
+  const polPoint = useMemo(() => parsePointString(headerObj?.pol_point), [headerObj]);
+  const podPoint = useMemo(() => parsePointString(headerObj?.pod_point), [headerObj]);
+  const potPoint = useMemo(() => parsePointString(headerObj?.pot_point), [headerObj]);
 
+  const latestAisPoint = useMemo(() => {
+    if (aisCurrentPoint) return aisCurrentPoint;
+    if (aisHistoryPath.length > 0) return aisHistoryPath[aisHistoryPath.length - 1];
+    return null;
+  }, [aisCurrentPoint, aisHistoryPath]);
 
-const latestAisPoint = useMemo(() => {
-  if (aisCurrentPoint) return aisCurrentPoint;
-  if (aisHistoryPath.length > 0) return aisHistoryPath[aisHistoryPath.length - 1];
-  return null;
-}, [aisCurrentPoint, aisHistoryPath]);
+  const expectedPath = useMemo(() => {
+    if (!latestAisPoint) return [];
+    const pts = [latestAisPoint];
+    if (potPoint) pts.push(potPoint);
+    if (podPoint) pts.push(podPoint);
+    return pts.length > 1 ? pts : [];
+  }, [latestAisPoint, potPoint, podPoint]);
 
-const expectedPath = useMemo(() => {
-  if (!latestAisPoint) return [];
+  const fallbackMapPath = useMemo(() => {
+    if (!data) return [];
+    const eventList = data["event list"] || data.event_list || [];
+    return eventList
+      .filter((e) => e && (e["port name"] || e.port_name))
+      .map((e) => coords[cleanPortName(e["port name"] || e.port_name)])
+      .filter(Boolean);
+  }, [data, coords]);
 
-  const pts = [latestAisPoint];
+  // --- KODE BARU: PAKSA JALUR POL -> POT -> POD ---
+  const fallbackRouteLine = useMemo(() => {
+    const pts = [];
+    if (polPoint) pts.push(polPoint);
+    if (potPoint) pts.push(potPoint);
+    if (podPoint) pts.push(podPoint);
+    
+    return pts.length > 1 ? pts : fallbackMapPath;
+  }, [polPoint, potPoint, podPoint, fallbackMapPath]);
+  // ------------------------------------------------
 
-  if (potPoint) pts.push(potPoint);
-  if (podPoint) pts.push(podPoint);
+  const hasAisHistory = aisHistoryPath.length > 1;
+  const hasAisCurrent = !!aisCurrentPoint;
 
-  return pts.length > 1 ? pts : [];
-}, [latestAisPoint, potPoint, podPoint]);
+  const mapMode = hasAisHistory
+    ? "ais_history"
+    : hasAisCurrent
+    ? "ais_current"
+    : fallbackMapPath.length > 0
+    ? "fallback"
+    : "empty";
 
+  const mapCenter = useMemo(() => {
+    if (hasAisCurrent) return aisCurrentPoint;
+    if (hasAisHistory) return aisHistoryPath[aisHistoryPath.length - 1];
+    if (fallbackMapPath.length > 0) return fallbackMapPath[0];
+    return [15, 95];
+  }, [hasAisCurrent, aisCurrentPoint, hasAisHistory, aisHistoryPath, fallbackMapPath]);
 
-const fallbackMapPath = useMemo(() => {
-  if (!data) return [];
-
-  const eventList = data["event list"] || data.event_list || [];
-  return eventList
-    .filter((e) => e && (e["port name"] || e.port_name))
-    .map((e) => coords[cleanPortName(e["port name"] || e.port_name)])
-    .filter(Boolean);
-}, [data, coords]);
-
-const hasAisHistory = aisHistoryPath.length > 1;
-const hasAisCurrent = !!aisCurrentPoint;
-
-const mapMode = hasAisHistory
-  ? "ais_history"
-  : hasAisCurrent
-  ? "ais_current"
-  : fallbackMapPath.length > 0
-  ? "fallback"
-  : "empty";
-
-const mapCenter = useMemo(() => {
-  if (hasAisCurrent) return aisCurrentPoint;
-  if (hasAisHistory) return aisHistoryPath[aisHistoryPath.length - 1];
-  if (fallbackMapPath.length > 0) return fallbackMapPath[0];
-  return [15, 95];
-}, [hasAisCurrent, aisCurrentPoint, hasAisHistory, aisHistoryPath, fallbackMapPath]);
-
-const mapBounds = useMemo(() => {
-  const pts = [];
-
-  if (hasAisHistory) pts.push(...aisHistoryPath);
-  if (hasAisCurrent) pts.push(aisCurrentPoint);
-  if (!hasAisHistory && !hasAisCurrent) pts.push(...fallbackMapPath);
-  if (polPoint) pts.push(polPoint);
-  if (potPoint) pts.push(potPoint);
-  if (podPoint) pts.push(podPoint);
-
-  return pts.filter(Boolean);
-}, [hasAisHistory, aisHistoryPath, hasAisCurrent, aisCurrentPoint, fallbackMapPath, podPoint, potPoint, polPoint]);
-
+  const mapBounds = useMemo(() => {
+    const pts = [];
+    if (hasAisHistory) pts.push(...aisHistoryPath);
+    if (hasAisCurrent) pts.push(aisCurrentPoint);
+    if (!hasAisHistory && !hasAisCurrent) pts.push(...fallbackMapPath);
+    if (polPoint) pts.push(polPoint);
+    if (potPoint) pts.push(potPoint);
+    if (podPoint) pts.push(podPoint);
+    return pts.filter(Boolean);
+  }, [hasAisHistory, aisHistoryPath, hasAisCurrent, aisCurrentPoint, fallbackMapPath, podPoint, potPoint, polPoint]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -568,14 +564,20 @@ const mapBounds = useMemo(() => {
 
   return (
     <GclLayout>
-      <div className="gocomet-dark-container">
+      {/* PERBAIKAN 1: Tambahkan boxSizing: border-box dan overflowX: hidden untuk mencegah meluber */}
+      <div 
+        className="gocomet-dark-container" 
+        style={{ boxSizing: "border-box", width: "100%", height: "100%", overflowX: "hidden", overflowY: "auto", padding: "24px 32px" }}
+      >
         <style>{`
           .tracking-content-row {
             display: grid;
-            grid-template-columns: minmax(0, 1.9fr) minmax(340px, 0.9fr);
+            /* PERBAIKAN 2: Batasi maksimal lebar panel kanan (timeline) agar tidak menabrak batas layar */
+            grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
             gap: 18px;
             align-items: stretch;
             margin-top: 18px;
+            width: 100%;
           }
 
           .tracking-map-panel,
@@ -595,6 +597,7 @@ const mapBounds = useMemo(() => {
           .tracking-journey-panel {
             display: flex;
             flex-direction: column;
+            overflow: hidden; /* Mencegah elemen dalam timeline meluber */
           }
 
           .tracking-timeline-wrapper {
@@ -668,15 +671,19 @@ const mapBounds = useMemo(() => {
         `}</style>
 
         <div className="gocomet-top-bar">
-          <h2 className="page-title">Shipment Tracking</h2>
-          <form onSubmit={handleSubmit} className="search-inline">
+          <div className="gocomet-title-wrap">
+            <h2 className="page-title">Shipment Tracking</h2>
+            <p className="page-subtitle">Live tracking with arrival forecasts — concise, clear, and supply‑chain friendly.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="search-inline" aria-label="Track shipment">
             <input
               value={inputSi}
               onChange={(e) => setInputSi(e.target.value)}
               placeholder="Enter HBL Number..."
               className="si-input"
             />
-            <button type="submit" disabled={loading}>
+            <button type="submit" disabled={loading} className="si-button">
               {loading ? "Searching..." : "Track"}
             </button>
           </form>
@@ -837,26 +844,16 @@ const mapBounds = useMemo(() => {
                             </Marker>
                           )}
 
-                          {/* Actual AIS path */}
-                            {aisHistoryPath.length > 1 && (
-                              <Polyline
-                                positions={aisHistoryPath}
-                                color="#2563eb"
-                                weight={4}
-                                opacity={0.95}
-                              />
-                            )}
-
-                            {/* Expected / ETA path */}
-                            {expectedPath.length > 1 && (
-                              <Polyline
-                                positions={expectedPath}
-                                color="#facc15"
-                                weight={3}
-                                opacity={0.85}
-                                dashArray="8, 8"
-                              />
-                            )}
+                          {/* Expected / ETA path */}
+                          {expectedPath.length > 1 && (
+                            <Polyline
+                              positions={expectedPath}
+                              color="#facc15"
+                              weight={3}
+                              opacity={0.85}
+                              dashArray="8, 8"
+                            />
+                          )}
                         </>
                       )}
 
@@ -913,9 +910,10 @@ const mapBounds = useMemo(() => {
                             </Marker>
                           ))}
 
-                          {fallbackMapPath.length > 1 && (
+                          {/* PERBAIKAN 3: Gunakan fallbackRouteLine agar melewati Transhipment Port (Ungu) */}
+                          {fallbackRouteLine.length > 1 && (
                             <Polyline
-                              positions={fallbackMapPath}
+                              positions={fallbackRouteLine}
                               color="#38bdf8"
                               weight={3}
                               dashArray="5, 5"

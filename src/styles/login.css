@@ -554,3 +554,53 @@
     min-width: 100px;
   }
 }
+
+/* =========================================
+   BACK TO MAIN WEBSITE (TOP LEFT)
+   ========================================= */
+.gcl-back-to-main {
+  position: absolute;
+  top: 2.5rem;
+  left: 3rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-decoration: none; /* Menghilangkan garis bawah pada link */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: modalPop 0.5s ease-out forwards;
+}
+
+.gcl-back-to-main:hover {
+  background: #0f4fd8; /* Berubah menjadi biru saat disorot */
+  border-color: #0f4fd8;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(15, 79, 216, 0.4);
+}
+
+/* Responsif untuk Layar HP */
+@media (max-width: 768px) {
+  .gcl-back-to-main {
+    top: 1.5rem;
+    left: 1rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  /* Sembunyikan tulisan di HP, biarkan icon panahnya saja agar layar lega */
+  .gcl-back-to-main span {
+    display: none; 
+  }
+}

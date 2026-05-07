@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/login.css";
+import { FaArrowLeft } from "react-icons/fa"; // <-- TAMBAHKAN IMPORT INI
 
 const API_LOGIN_URL = "https://gateway-cl.com/api/Customer_login/login"; 
 // Endpoint baru untuk request access (Sesuaikan dengan route CodeIgniter Anda)
@@ -186,6 +187,15 @@ function LoginPage() {
 
   return (
     <div className="gcl-auth-wrapper">
+      
+      {/* --- TOMBOL KEMBALI KE WEB UTAMA (POJOK KIRI ATAS) --- */}
+      <a 
+        href="https://gateway-id.com" 
+        className="gcl-back-to-main"
+        title="Back to Gateway Main Website"
+      >
+        <FaArrowLeft /> <span>Gateway Website</span>
+      </a>
       {/* --- TAMBAHKAN KODE INI (SHORTCUT MENU PUBLIK) --- */}
       <div className="gcl-login-quicklinks">
         <button onClick={() => navigate('/schedule')} className="gcl-quick-btn">
@@ -260,7 +270,7 @@ function LoginPage() {
           </div>
 
           <h1 className="gcl-auth-title">Welcome Back</h1>
-          <p className="gcl-auth-subtitle">Manage your shipments and logistics with ease.</p>
+          <p className="gcl-auth-subtitle">Manage your shipments with ease.</p>
 
           {error && <div className="gcl-auth-alert error">{error}</div>}
 
