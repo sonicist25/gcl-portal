@@ -7,6 +7,7 @@ import "../styles/new_booking.css";
 import Swal from "sweetalert2";
 import NewBookingModal from "./NewBookingModal";
 import { apiFetch } from "../utils/authApi";
+import { Truck, Box, Package, Plane, FileText, Shield } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
 
@@ -39,6 +40,46 @@ async function ensureAuth() {
   if (json?.status === false) throw new Error(json?.message || "SESSION_INVALID");
   return true;
 }
+
+function normalizeServiceType(raw) {
+  const s = (raw || "").toUpperCase();
+  if (s.includes("TRUCKING")) return "INLAND";
+  if (s === "COLOAD" || s === "LCL") return "LCL EXP";
+  if (s === "COLOAD IMPORT" || s === "SF IMPORT LCL") return "LCL IMP";
+  if (s === "FCL") return "FCL EXP";
+  if (s === "SF IMPORT FCL") return "FCL IMP";
+  if (s === "CUSTOM") return "CUSTOM EXP";
+  if (s === "CUSTOM IMPORT") return "CUSTOM IMP";
+  if (s === "AIR FREIGHT") return "AIR EXP";
+  if (s === "AIR FREIGHT IMPORT") return "AIR IMP";
+  if (s === "MESCELLENEOUS") return "OTHER";
+  return s || "OTHER";
+}
+
+function getServiceIcon(type) {
+  const s = normalizeServiceType(type);
+  const style = { width: 18, height: 18, marginRight: 6 };
+
+  switch (s) {
+    case "INLAND":
+      return <Truck style={style} />;
+    case "LCL EXP":
+    case "LCL IMP":
+      return <Box style={style} />;
+    case "FCL EXP":
+    case "FCL IMP":
+      return <Package style={style} />; // container cargo
+    case "AIR EXP":
+    case "AIR IMP":
+      return <Plane style={style} />;
+    case "CUSTOM EXP":
+    case "CUSTOM IMP":
+      return <Shield style={style} />; // officer/police style
+    default:
+      return <FileText style={style} />; // document for OTHER
+  }
+}
+
 
 function getTrackingStatusMeta(rawStatus) {
   const s = (rawStatus || "").trim();
@@ -273,7 +314,7 @@ function BookingList() {
                     <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>No</th>
                     <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Booking No</th>
                     <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>BL No</th>
-                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Meass</th>
+                    <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Mode</th>
                     <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>ETD</th>
                     <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>ETA</th>
                     <th style={{ padding: "14px 16px", color: "#94a3b8", borderBottom: "1px solid #334155" }}>Vessel</th>
@@ -297,7 +338,12 @@ function BookingList() {
                         <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{idx + 1}</td>
                         <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", fontWeight: "600" }}>{row.no_from_shipper || "-"}</td>
                         <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{row.hbl || "-"}</td>
-                        <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{row.measurement || "-"}</td>
+                        <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            {getServiceIcon(row.type_of_trans)}
+                            <span>{normalizeServiceType(row.type_of_trans) || "-"}</span>
+                          </span>
+                        </td>
                         <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{formatDate(row.etd_jkt)}</td>
                         <td style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{formatDate(row.eta)}</td>
                         <td className="gcl-col-booking-no" style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{row.feeder_vessel || "-"}</td>
