@@ -12,6 +12,7 @@ import {
   Ship,
   Timer,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // <-- TAMBAHKAN INI
 import GclLayout from "../layouts/GclLayout";
 import { getExportSchedule, getImportSchedule } from "../api/schedule";
 import NewBookingModal from "./NewBookingModal";
@@ -718,6 +719,7 @@ function ScheduleTable({ rows, mode, onBook }) {
 }
 
 export default function SchedulePage() {
+  const navigate = useNavigate(); // <-- TAMBAHKAN INI
   const [mode, setMode] = useState("export");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -971,7 +973,15 @@ export default function SchedulePage() {
 
   // --- HANDLER: BUKA MODAL DARI TOMBOL BOOK ---
   const handleBook = (row) => {
-    // row di sini adalah normalized row Portal (punya property `.raw` untuk data aslinya)
+    // GEMBOK LAPIS 1: Cek Token
+    const token = localStorage.getItem("gcl_access_token");
+    if (!token) {
+      // Lempar ke login dan hentikan eksekusi!
+      navigate("/login");
+      return; 
+    }
+
+    // Jika sudah login, lanjut buka form
     const isVia = row.service === "via";
     const raw = row.raw;
 
@@ -1065,6 +1075,9 @@ export default function SchedulePage() {
 
   const portFilterLabel = mode === "import" ? "Origin" : "Destination";
   const portOptions = mode === "import" ? originOptions : destinationOptions;
+
+  // <-- TAMBAHKAN INI DI SINI
+  const isLoggedIn = !!localStorage.getItem("gcl_access_token");
 
   return (
     <GclLayout>
@@ -1267,15 +1280,18 @@ export default function SchedulePage() {
       </div>
       
       {/* Component Modal New Booking */}
-      <NewBookingModal 
-        open={showModal}
-        onClose={() => {
-            setShowModal(false);
-            setSelectedSchedule(null);
-        }}
-        onSubmit={handleSubmitBooking}
-        initialData={selectedSchedule}
-      />
+      {showModal && isLoggedIn && (
+        <NewBookingModal 
+          open={showModal}
+          onClose={() => {
+              setShowModal(false);
+              setSelectedSchedule(null);
+          }}
+          onSubmit={handleSubmitBooking}
+          initialData={selectedSchedule}
+        />
+      )}
+
     </div>
     </GclLayout>
   );
