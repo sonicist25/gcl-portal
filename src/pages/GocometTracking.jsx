@@ -205,6 +205,54 @@ const getAisHistoryPoints = (data) => {
     .filter(Boolean);
 };
 
+
+const getFixedJourneyPriority = (step) => {
+  const locType = String(step?.["location type"] || step?.location_type || "").toLowerCase();
+  const eventName = String(step?.["event name"] || step?.event_name || "").toLowerCase();
+  const text = `${eventName} ${locType}`;
+
+  // Urutan paten untuk proses awal shipment.
+  // Prioritas ini sengaja tidak mengikuti datetime, karena beberapa event lokal/gudang
+  // punya tanggal input yang sama atau tidak konsisten dengan urutan operasional.
+  if (text.includes("booking confirmed") || text.includes("booking confirmation")) return 10;
+
+  if (
+    text.includes("cargo collection") ||
+    text.includes("cargo arrival confirmation") ||
+    text.includes("cargo received") ||
+    text.includes("receiving")
+  ) {
+    return 20;
+  }
+
+  if (text.includes("empty pickup") || text.includes("empty pick-up")) return 30;
+
+  if (
+    text.includes("consolidation") ||
+    text.includes("cargo stuffing") ||
+    text.includes("stuffing")
+  ) {
+    return 40;
+  }
+
+  if (
+    text.includes("container sealed") ||
+    text.includes("moving to container yard")
+  ) {
+    return 50;
+  }
+
+  if (
+    text.includes("gate in") ||
+    text.includes("gated in") ||
+    text.includes("get in")
+  ) {
+    return 60;
+  }
+
+  return 1000;
+};
+
 // =========================
 // JOURNEY GENERATOR
 // =========================
@@ -346,8 +394,22 @@ const generateUnifiedJourney = (data) => {
     .filter(Boolean);
 
   timeline.sort((a, b) => {
+    const pa = getFixedJourneyPriority(a);
+    const pb = getFixedJourneyPriority(b);
+
+    // Event awal shipment dibuat paten:
+    // Booking -> Cargo Collection -> Empty Pickup -> Consolidation -> Container Sealed -> Gate In
+    if (pa !== pb) return pa - pb;
+
+    // Untuk event lain, tetap gunakan datetime.
+    const ta = parseDate(a["event time"] || a.event_time);
+    const tb = parseDate(b["event time"] || b.event_time);
+    if (ta !== tb) return ta - tb;
+
+    // Fallback terakhir baru pakai nomor dari API.
     if (a.no !== undefined && b.no !== undefined) return a.no - b.no;
-    return parseDate(a["event time"]) - parseDate(b["event time"]);
+
+    return 0;
   });
 
   return timeline;
@@ -492,18 +554,20 @@ function GocometTracking({ defaultSiNumber = "" }) {
   const potPoint = useMemo(() => parsePointString(headerObj?.pot_point), [headerObj]);
 
   const latestAisPoint = useMemo(() => {
-    if (aisCurrentPoint) return aisCurrentPoint;
-    if (aisHistoryPath.length > 0) return aisHistoryPath[aisHistoryPath.length - 1];
-    return null;
-  }, [aisCurrentPoint, aisHistoryPath]);
+    // Current cargo marker hanya boleh tampil kalau API mengirim ais_current valid.
+    // Jangan fallback ke AIS history, karena history bukan posisi cargo current.
+    return aisCurrentPoint || null;
+  }, [aisCurrentPoint]);
 
   const expectedPath = useMemo(() => {
-    if (!latestAisPoint) return [];
-    const pts = [latestAisPoint];
+    // Expected/ETA path dari posisi kapal hanya dibuat jika ais_current valid.
+    if (!aisCurrentPoint) return [];
+
+    const pts = [aisCurrentPoint];
     if (potPoint) pts.push(potPoint);
     if (podPoint) pts.push(podPoint);
     return pts.length > 1 ? pts : [];
-  }, [latestAisPoint, potPoint, podPoint]);
+  }, [aisCurrentPoint, potPoint, podPoint]);
 
   const fallbackMapPath = useMemo(() => {
     if (!data) return [];
@@ -905,8 +969,24 @@ function GocometTracking({ defaultSiNumber = "" }) {
                       {mapMode === "fallback" && (
                         <>
                           {fallbackMapPath.map((pos, i) => (
-                            <Marker key={`fallback-${i}`} position={pos}>
-                              <Popup>Route Point {i + 1}</Popup>
+                            <Marker
+                              key={`fallback-${i}`}
+                              position={pos}
+                              icon={
+                                i === 0
+                                  ? polIcon
+                                  : i === fallbackMapPath.length - 1
+                                  ? podIcon
+                                  : startTrackIcon
+                              }
+                            >
+                              <Popup>
+                                {i === 0
+                                  ? "Origin"
+                                  : i === fallbackMapPath.length - 1
+                                  ? "Destination"
+                                  : `Route Point ${i + 1}`}
+                              </Popup>
                             </Marker>
                           ))}
 
@@ -951,8 +1031,9 @@ function GocometTracking({ defaultSiNumber = "" }) {
                             </Marker>
                           )}
 
-                          {latestAisPoint && (
-                            <Marker position={latestAisPoint} icon={currentCargoIcon}>
+                          {/* Tidak render current cargo di fallback jika ais_current kosong. */}
+                          {aisCurrentPoint && (
+                            <Marker position={aisCurrentPoint} icon={currentCargoIcon}>
                               <Popup>
                                 <strong>Current Cargo Position</strong>
                                 <br />
