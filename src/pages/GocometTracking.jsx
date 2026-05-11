@@ -253,6 +253,94 @@ const getFixedJourneyPriority = (step) => {
   return 1000;
 };
 
+
+const findFirstNumberRecursive = (input, keys = []) => {
+  if (input === null || input === undefined) return null;
+
+  if (typeof input === "number" && Number.isFinite(input)) {
+    return input;
+  }
+
+  if (typeof input === "string") {
+    const cleaned = input.replace(/,/g, "").trim();
+    if (cleaned !== "" && !Number.isNaN(Number(cleaned))) {
+      return Number(cleaned);
+    }
+  }
+
+  if (Array.isArray(input)) {
+    for (const item of input) {
+      const found = findFirstNumberRecursive(item, keys);
+      if (found !== null) return found;
+    }
+    return null;
+  }
+
+  if (typeof input === "object") {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(input, key)) {
+        const found = findFirstNumberRecursive(input[key], keys);
+        if (found !== null) return found;
+      }
+    }
+
+    for (const value of Object.values(input)) {
+      const found = findFirstNumberRecursive(value, keys);
+      if (found !== null) return found;
+    }
+  }
+
+  return null;
+};
+
+const getCo2EmissionValue = (data) => {
+  const co2 = data?.co2_emission ?? data?.co2Emission ?? data?.carbon_emission;
+  if (!co2) return null;
+
+  return findFirstNumberRecursive(co2, [
+    "co2",
+    "co2Kg",
+    "co2_kg",
+    "co2Ton",
+    "co2_ton",
+    "co2Tonnes",
+    "co2_tonnes",
+    "co2Tons",
+    "co2_tons",
+    "emission",
+    "emissions",
+    "totalEmission",
+    "total_emission",
+    "totalCo2",
+    "total_co2",
+    "carbonEmission",
+    "carbon_emission",
+    "estimatedCo2",
+    "estimated_co2",
+    "value",
+  ]);
+};
+
+const formatCo2Emission = (value) => {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+
+  const n = Number(value);
+
+  // Kalau nilai besar, tampilkan sebagai ton agar lebih ringkas.
+  // Kalau backend/Jarvis sudah mengirim ton kecil, tetap tampil kg/CO2 sesuai nilai mentah.
+  if (n >= 1000) {
+    return `${(n / 1000).toLocaleString("en-US", {
+      maximumFractionDigits: 2,
+    })} tCO₂`;
+  }
+
+  return `${n.toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  })} kg CO₂`;
+};
+
 // =========================
 // JOURNEY GENERATOR
 // =========================
@@ -547,6 +635,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
   }, [data]);
 
   const headerObj = data?.header?.[0]?.[0] || data?.header?.[0] || null;
+  const co2EmissionValue = useMemo(() => getCo2EmissionValue(data), [data]);
   const aisCurrentPoint = useMemo(() => getAisCurrentPoint(data), [data]);
   const aisHistoryPath = useMemo(() => getAisHistoryPoints(data), [data]);
   const polPoint = useMemo(() => parsePointString(headerObj?.pol_point), [headerObj]);
@@ -722,6 +811,28 @@ function GocometTracking({ defaultSiNumber = "" }) {
             display: inline-block;
           }
 
+
+          .co2-header-value {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #86efac !important;
+            font-weight: 800;
+          }
+
+          .co2-leaf-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(34, 197, 94, 0.14);
+            border: 1px solid rgba(134, 239, 172, 0.32);
+            box-shadow: 0 0 14px rgba(34, 197, 94, 0.20);
+            font-size: 14px;
+          }
+
           @media (max-width: 1100px) {
             .tracking-content-row {
               grid-template-columns: 1fr;
@@ -808,6 +919,16 @@ function GocometTracking({ defaultSiNumber = "" }) {
                   {formatDisplayDate(headerObj["last update"])}
                 </span>
               </div>
+
+              {co2EmissionValue !== null && (
+                <div className="header-item">
+                  <span className="lbl">CO₂ Emission</span>
+                  <span className="val co2-header-value">
+                    <span className="co2-leaf-icon" aria-hidden="true">🍃</span>
+                    {formatCo2Emission(co2EmissionValue)}
+                  </span>
+                </div>
+              )}
 
               {headerObj.arrived && (
                 <div className="header-item full-width">
