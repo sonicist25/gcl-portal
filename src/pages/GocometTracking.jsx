@@ -195,14 +195,36 @@ const getAisHistoryPoints = (data) => {
 
   return source
     .map((item) => {
-      const lat = Number(item?.lat ?? item?.latitude);
-      const lon = Number(item?.lon ?? item?.longitude);
+      const lat = Number(item?.lat ?? item?.latitude ?? item?.Latitude);
+      const lon = Number(item?.lon ?? item?.longitude ?? item?.Longitude);
+
+      const timestamp =
+        item?.timestamp ||
+        item?.PositionLastUpdated ||
+        item?.positionTime ||
+        item?.lastUpdated ||
+        item?.last_updated ||
+        item?.time ||
+        "";
+
       if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        return [lat, lon];
+        return {
+          point: [lat, lon],
+          ts: timestamp ? new Date(timestamp).getTime() : 0,
+        };
       }
+
       return null;
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => {
+      // urutkan dari titik paling lama -> paling baru
+      if (!a.ts && !b.ts) return 0;
+      if (!a.ts) return 1;
+      if (!b.ts) return -1;
+      return a.ts - b.ts;
+    })
+    .map((item) => item.point);
 };
 
 
@@ -648,16 +670,6 @@ function GocometTracking({ defaultSiNumber = "" }) {
     return aisCurrentPoint || null;
   }, [aisCurrentPoint]);
 
-  const expectedPath = useMemo(() => {
-    // Expected/ETA path dari posisi kapal hanya dibuat jika ais_current valid.
-    if (!aisCurrentPoint) return [];
-
-    const pts = [aisCurrentPoint];
-    if (potPoint) pts.push(potPoint);
-    if (podPoint) pts.push(podPoint);
-    return pts.length > 1 ? pts : [];
-  }, [aisCurrentPoint, potPoint, podPoint]);
-
   const fallbackMapPath = useMemo(() => {
     if (!data) return [];
     const eventList = data["event list"] || data.event_list || [];
@@ -681,6 +693,49 @@ function GocometTracking({ defaultSiNumber = "" }) {
   const hasAisHistory = aisHistoryPath.length > 1;
   const hasAisCurrent = !!aisCurrentPoint;
 
+   const expectedPath = useMemo(() => {
+    // Expected/ETA path dari posisi kapal hanya dibuat jika ais_current valid.
+    if (!aisCurrentPoint) return [];
+
+    const pts = [aisCurrentPoint];
+    if (potPoint) pts.push(potPoint);
+    if (podPoint) pts.push(podPoint);
+    return pts.length > 1 ? pts : [];
+  }, [aisCurrentPoint, potPoint, podPoint]);
+
+const aisDisplayPath = useMemo(() => {
+  if (!hasAisHistory) return [];
+
+  const pts = [];
+
+  // POL hanya sebagai awal visual route
+  if (polPoint) pts.push(polPoint);
+
+  // AIS history sudah disort dari lama -> baru
+  pts.push(...aisHistoryPath);
+
+  const unique = [];
+
+  pts.forEach((p) => {
+    if (!p || p.length < 2) return;
+
+    const lat = Number(p[0]);
+    const lon = Number(p[1]);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    const exists = unique.some(
+      (u) =>
+        Math.abs(Number(u[0]) - lat) < 0.0001 &&
+        Math.abs(Number(u[1]) - lon) < 0.0001
+    );
+
+    if (!exists) unique.push([lat, lon]);
+  });
+
+  return unique;
+}, [hasAisHistory, polPoint, aisHistoryPath]);
+
   const mapMode = hasAisHistory
     ? "ais_history"
     : hasAisCurrent
@@ -698,14 +753,26 @@ function GocometTracking({ defaultSiNumber = "" }) {
 
   const mapBounds = useMemo(() => {
     const pts = [];
-    if (hasAisHistory) pts.push(...aisHistoryPath);
+
+    if (hasAisHistory) pts.push(...aisDisplayPath);
     if (hasAisCurrent) pts.push(aisCurrentPoint);
     if (!hasAisHistory && !hasAisCurrent) pts.push(...fallbackMapPath);
+
     if (polPoint) pts.push(polPoint);
     if (potPoint) pts.push(potPoint);
     if (podPoint) pts.push(podPoint);
+
     return pts.filter(Boolean);
-  }, [hasAisHistory, aisHistoryPath, hasAisCurrent, aisCurrentPoint, fallbackMapPath, podPoint, potPoint, polPoint]);
+  }, [
+    hasAisHistory,
+    aisDisplayPath,
+    hasAisCurrent,
+    aisCurrentPoint,
+    fallbackMapPath,
+    podPoint,
+    potPoint,
+    polPoint,
+  ]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -970,7 +1037,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
                       {mapMode === "ais_history" && (
                         <>
                           <Polyline
-                            positions={aisHistoryPath}
+                            positions={aisDisplayPath}
                             color="#2563eb"
                             weight={4}
                             opacity={0.95}
