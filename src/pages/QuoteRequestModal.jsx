@@ -50,7 +50,7 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
     try {
       // Gunakan apiFetch agar X-API-KEY dan Token otomatis terkirim
       // Tidak perlu menuliskan domain lengkap jika apiFetch sudah menghandle baseURL
-      const json = await apiFetch(`/port/get_dropdown_export/pod?q=${inputValue}`);
+      const json = await apiFetch(`/port/get_dropdown_port/all?q=${inputValue}`);
 
       // Karena dari Postman balasan API langsung berupa array: [ {code:..}, {code:..} ]
       // Kita pastikan formatnya dibaca dengan benar
