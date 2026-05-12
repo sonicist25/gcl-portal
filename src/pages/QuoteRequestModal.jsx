@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import AsyncSelect from "react-select/async";
-import { apiFetch } from "../utils/authApi"; // <-- Tambahkan baris ini
+import { apiFetch } from "../utils/authApi"; 
 
 export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
-  // State untuk form input, ditambahkan origin dan destination
+  // Tambahkan transportType di state
   const [formData, setFormData] = useState({
+    transportType: "SEA", // Default SEA
     origin: null,
     destination: null,
     quantity: "",
@@ -16,13 +17,14 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
     notes: ""
   });
 
-  // Reset form & set initial route dari rateData setiap kali modal dibuka
+  // Reset form & set initial route
   useEffect(() => {
     if (isOpen) {
       const initOrigin = rateData?.origin || rateData?.region || rateData?.region_id;
       const initDest = rateData?.destination || rateData?.destination_code;
 
       setFormData({
+        transportType: rateData?.transport_mode ? rateData.transport_mode.toUpperCase() : "SEA",
         origin: initOrigin ? { label: initOrigin, value: initOrigin } : null,
         destination: initDest ? { label: initDest, value: initDest } : null,
         quantity: "",
@@ -41,24 +43,36 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
   const serviceType = rateData?.serviceType || "Freight Service";
   const carrier = rateData?.airline || rateData?.carrier || "-";
 
-  // ==========================================
-  // Fungsi Load Data untuk AsyncSelect (Select2)
-  // ==========================================
+  // Fungsi mengubah tipe transportasi (mereset port yang sudah dipilih)
+  const handleTypeChange = (type) => {
+    setFormData((prev) => ({
+      ...prev,
+      transportType: type,
+      origin: null,
+      destination: null
+    }));
+  };
+
+  // Dinamis endpoint berdasarkan transportType
   const loadPortOptions = async (inputValue) => {
     if (!inputValue || inputValue.length < 2) return [];
     
     try {
-      // Gunakan apiFetch agar X-API-KEY dan Token otomatis terkirim
-      // Tidak perlu menuliskan domain lengkap jika apiFetch sudah menghandle baseURL
-      const json = await apiFetch(`/port/get_dropdown_port/all?q=${inputValue}`);
+      let endpoint = `/port/get_dropdown_port/all?q=${inputValue}`; // SEA
+      
+      if (formData.transportType === "AIR") {
+        endpoint = `/port/get_airport?q=${inputValue}`;
+      } else if (formData.transportType === "DOMESTIC") {
+        endpoint = `/port/get_domestic?q=${inputValue}`;
+      }
 
-      // Karena dari Postman balasan API langsung berupa array: [ {code:..}, {code:..} ]
-      // Kita pastikan formatnya dibaca dengan benar
+      const json = await apiFetch(endpoint);
       const items = Array.isArray(json) ? json : (json?.data || []);
 
       return items.map((port) => ({
-        label: `${port.name} (${port.code})`,
-        value: port.code
+        // Sesuaikan dengan response field name jika format port/airport/domestic berbeda (misal ada yang pakai iata_code vs code)
+        label: `${port.name} (${port.code || port.iata_code || port.id})`,
+        value: port.code || port.iata_code || port.id || port.name
       }));
       
     } catch (e) {
@@ -66,7 +80,7 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
       return [];
     }
   };
-  // Custom styling untuk react-select agar menyatu dengan desain Tailwind Anda
+
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
@@ -80,70 +94,98 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
       '&:hover': { borderBottom: '2px solid #2563EB' }
     }),
     valueContainer: (base) => ({ ...base, padding: '0px 0px' }),
-    singleValue: (base) => ({ ...base, color: '#111827', fontWeight: '500' }), // Teks warna gelap
+    singleValue: (base) => ({ ...base, color: '#111827', fontWeight: '500' }),
     input: (base) => ({ ...base, color: '#111827' }),
     placeholder: (base) => ({ ...base, color: '#9CA3AF', fontSize: '0.875rem' }),
     menu: (base) => ({ ...base, zIndex: 9999 }),
     option: (base, state) => ({
       ...base,
-      color: state.isSelected ? '#ffffff' : '#111827', // Teks putih jika dipilih, hitam/gelap jika tidak
-      backgroundColor: state.isSelected 
-        ? '#2563EB' // Latar biru pekat jika opsi sedang dipilih
-        : state.isFocused 
-          ? '#EFF6FF' // Latar biru sangat muda saat di-hover
-          : 'white',  // Latar putih default
+      color: state.isSelected ? '#ffffff' : '#111827',
+      backgroundColor: state.isSelected ? '#2563EB' : state.isFocused ? '#EFF6FF' : 'white',
       cursor: 'pointer',
       fontWeight: '500'
     })
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitting Quote Request:", {
-      route: { 
-        origin: formData.origin?.value, 
-        destination: formData.destination?.value, 
-        serviceType, 
-        carrier 
-      },
-      details: formData,
-      rateId: rateData?.id
-    });
     
-    alert("Permintaan penawaran berhasil dikirim!");
-    onClose();
+    // Siapkan payload
+    const payload = {
+      transport_type: formData.transportType,
+      origin: formData.origin?.value,
+      destination: formData.destination?.value,
+      service_type: serviceType,
+      carrier: carrier,
+      rate_id: rateData?.id,
+      quantity: formData.quantity,
+      packaging: formData.packaging,
+      weight: formData.weight,
+      volume: formData.volume,
+      ready_date: formData.readyDate,
+      expected_etd: formData.expectEtd,
+      notes: formData.notes
+    };
+
+    console.log("Submitting Quote Request:", payload);
+
+    try {
+      // POST data ke backend (Sesuaikan dengan nama endpoint backend Anda)
+      await apiFetch('/api_customer/quotations/request', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      alert("Permintaan penawaran berhasil dikirim!");
+      onClose();
+    } catch (error) {
+      console.error("Submit error", error);
+      alert("Gagal mengirim penawaran");
+    }
   };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      ></div>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
 
-      {/* Modal Content */}
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
         
-        {/* Header */}
-        <div className="bg-blue-800 p-5 text-white flex justify-between items-start">
-          <div>
-            <h3 className="font-bold text-lg leading-tight">Request Quote</h3>
-            <p className="text-blue-200 text-xs uppercase tracking-wider mt-1 font-semibold">
-              {serviceType} {carrier !== "-" ? `• ${carrier}` : ""}
-            </p>
+        {/* Header - Ditambahkan Pilihan Transport Type */}
+        <div className="bg-blue-800 p-5 text-white flex flex-col gap-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-bold text-lg leading-tight">Request Quote</h3>
+              <p className="text-blue-200 text-xs uppercase tracking-wider mt-1 font-semibold">
+                {serviceType} {carrier !== "-" ? `• ${carrier}` : ""}
+              </p>
+            </div>
+            <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none">&times;</button>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none">&times;</button>
+          
+          {/* Transport Type Selectors */}
+          <div className="flex gap-4 mt-2">
+            {["SEA", "AIR", "DOMESTIC"].map((type) => (
+              <label key={type} className="flex items-center gap-1.5 cursor-pointer text-sm font-medium text-blue-100 hover:text-white transition">
+                <input
+                  type="radio"
+                  name="transportType"
+                  value={type}
+                  checked={formData.transportType === type}
+                  onChange={() => handleTypeChange(type)}
+                  className="accent-yellow-400 w-4 h-4"
+                />
+                {type}
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Form Inputs */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          
-          {/* Row 0: Origin & Destination (Select2) */}
           <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
             <div>
-              <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Origin</label>
+              <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Origin ({formData.transportType})</label>
               <AsyncSelect
+                key={`origin-${formData.transportType}`} // Reset component saat tipe berubah
                 cacheOptions
                 defaultOptions
                 loadOptions={loadPortOptions}
@@ -155,8 +197,9 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Destination</label>
+              <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Destination ({formData.transportType})</label>
               <AsyncSelect
+                key={`dest-${formData.transportType}`} // Reset component saat tipe berubah
                 cacheOptions
                 defaultOptions
                 loadOptions={loadPortOptions}
@@ -169,7 +212,6 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
             </div>
           </div>
 
-          {/* Row 1: Qty & Packaging */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Quantity</label>
@@ -198,7 +240,6 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
             </div>
           </div>
 
-          {/* Row 2: Weight & Volume */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Total Weight (KG)</label>
@@ -222,7 +263,6 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
             </div>
           </div>
 
-          {/* Row 3: Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cargo Ready Date</label>
@@ -244,7 +284,6 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
             </div>
           </div>
 
-          {/* Notes */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Remarks / Commodity</label>
             <textarea
@@ -256,19 +295,11 @@ export default function QuoteRequestModal({ isOpen, onClose, rateData }) {
             ></textarea>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 pt-2 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition"
-            >
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition">
               Cancel
             </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2.5 bg-yellow-400 text-blue-900 rounded-lg font-bold hover:bg-yellow-500 transition shadow-md"
-            >
+            <button type="submit" className="flex-1 px-4 py-2.5 bg-yellow-400 text-blue-900 rounded-lg font-bold hover:bg-yellow-500 transition shadow-md">
               Submit Request
             </button>
           </div>
