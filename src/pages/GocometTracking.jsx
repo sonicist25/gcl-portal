@@ -130,6 +130,91 @@ const parsePointString = (value) => {
   return [lat, lon];
 };
 
+const toRad = (deg) => (Number(deg) * Math.PI) / 180;
+
+const distanceKm = (a, b) => {
+  if (!a || !b) return Number.MAX_SAFE_INTEGER;
+
+  const lat1 = Number(a[0]);
+  const lon1 = Number(a[1]);
+  const lat2 = Number(b[0]);
+  const lon2 = Number(b[1]);
+
+  if (
+    !Number.isFinite(lat1) ||
+    !Number.isFinite(lon1) ||
+    !Number.isFinite(lat2) ||
+    !Number.isFinite(lon2)
+  ) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+};
+
+const removeDuplicatePoints = (points) => {
+  const out = [];
+
+  points.forEach((p) => {
+    if (!p || p.length < 2) return;
+
+    const lat = Number(p[0]);
+    const lon = Number(p[1]);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    const exists = out.some(
+      (u) =>
+        Math.abs(Number(u[0]) - lat) < 0.0001 &&
+        Math.abs(Number(u[1]) - lon) < 0.0001
+    );
+
+    if (!exists) out.push([lat, lon]);
+  });
+
+  return out;
+};
+
+const truncatePathAtDestination = (path, podPoint, thresholdKm = 120) => {
+  if (!Array.isArray(path) || path.length <= 1 || !podPoint) return path || [];
+
+  let nearestIndex = -1;
+  let nearestDistance = Number.MAX_SAFE_INTEGER;
+
+  path.forEach((point, index) => {
+    const d = distanceKm(point, podPoint);
+
+    if (d < nearestDistance) {
+      nearestDistance = d;
+      nearestIndex = index;
+    }
+  });
+
+  // Kalau AIS track tidak pernah mendekati POD, jangan dipotong.
+  // Ini mencegah route terpotong salah untuk kapal yang masih jauh dari tujuan.
+  if (nearestIndex < 0 || nearestDistance > thresholdKm) {
+    return path;
+  }
+
+  // Kalau titik terdekat POD bukan titik terakhir, berarti history sudah lewat destination.
+  // Potong sampai POD saja agar visual route tidak melewati destination.
+  const truncated = path.slice(0, nearestIndex + 1);
+  truncated.push(podPoint);
+
+  return removeDuplicatePoints(truncated);
+};
+
 const formatDisplayDate = (value) => {
   if (!value) return "-";
 
@@ -658,6 +743,11 @@ function GocometTracking({ defaultSiNumber = "" }) {
 
   const headerObj = data?.header?.[0]?.[0] || data?.header?.[0] || null;
   const co2EmissionValue = useMemo(() => getCo2EmissionValue(data), [data]);
+  const hasCo2Emission =
+    co2EmissionValue !== null &&
+    co2EmissionValue !== undefined &&
+    Number.isFinite(Number(co2EmissionValue)) &&
+    Number(co2EmissionValue) > 0;
   const aisCurrentPoint = useMemo(() => getAisCurrentPoint(data), [data]);
   const aisHistoryPath = useMemo(() => getAisHistoryPoints(data), [data]);
   const polPoint = useMemo(() => parsePointString(headerObj?.pol_point), [headerObj]);
@@ -706,35 +796,20 @@ function GocometTracking({ defaultSiNumber = "" }) {
 const aisDisplayPath = useMemo(() => {
   if (!hasAisHistory) return [];
 
-  const pts = [];
+  const basePath = [];
 
-  // POL hanya sebagai awal visual route
-  if (polPoint) pts.push(polPoint);
+  // Visual route selalu dimulai dari POL.
+  if (polPoint) basePath.push(polPoint);
 
-  // AIS history sudah disort dari lama -> baru
-  pts.push(...aisHistoryPath);
+  // AIS history sudah disort dari lama -> baru di getAisHistoryPoints().
+  basePath.push(...aisHistoryPath);
 
-  const unique = [];
+  const cleanPath = removeDuplicatePoints(basePath);
 
-  pts.forEach((p) => {
-    if (!p || p.length < 2) return;
-
-    const lat = Number(p[0]);
-    const lon = Number(p[1]);
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-
-    const exists = unique.some(
-      (u) =>
-        Math.abs(Number(u[0]) - lat) < 0.0001 &&
-        Math.abs(Number(u[1]) - lon) < 0.0001
-    );
-
-    if (!exists) unique.push([lat, lon]);
-  });
-
-  return unique;
-}, [hasAisHistory, polPoint, aisHistoryPath]);
+  // Batasi route agar tidak melewati POD.
+  // Jika titik history tidak pernah mendekati POD, route tidak dipotong.
+  return truncatePathAtDestination(cleanPath, podPoint, 120);
+}, [hasAisHistory, polPoint, podPoint, aisHistoryPath]);
 
   const mapMode = hasAisHistory
     ? "ais_history"
@@ -987,7 +1062,7 @@ const aisDisplayPath = useMemo(() => {
                 </span>
               </div>
 
-              {co2EmissionValue !== null && (
+              {hasCo2Emission && (
                 <div className="header-item">
                   <span className="lbl">CO₂ Emission</span>
                   <span className="val co2-header-value">

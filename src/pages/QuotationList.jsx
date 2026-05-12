@@ -241,8 +241,8 @@ export default function QuotationList() {
         onClose={() => setIsModalOpen(false)} 
         // Kirim data dummy/general karena ini dari halaman empty state (bukan dari rate spesifik)
         rateData={{
-          origin: "ANY ORIGIN",
-          destination: "ANY DESTINATION",
+          origin: "",
+          destination: "",
           serviceType: "General Freight Inquiry",
           carrier: "-"
         }}
