@@ -200,8 +200,14 @@ function BookingList() {
         method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: payload,
       });
 
-      if (json?.error || (json?.status && Number(json.status) !== 201)) {
-        throw new Error(json?.message || "Failed to save booking (Backend Error).");
+      const isSuccess =
+        json?.error === 0 ||
+        Number(json?.status) === 201 ||
+        json?.status === true ||
+        json?.status === "success";
+
+      if (!isSuccess) {
+        throw new Error(json?.message || "Failed to save booking.");
       }
 
       await Swal.fire({

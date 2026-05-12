@@ -54,7 +54,7 @@ function App() {
         />
 
         <Route
-          path="/quotations/:name"
+          path="/quotations/:id"
           element={
             <RequireAuth>
               <QuotationDetail />
