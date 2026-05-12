@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import GclLayout from "../layouts/GclLayout";
 import { apiFetch } from "../utils/authApi";
+// 1. Import komponen Modal (Sesuaikan path-nya jika berbeda)
+import QuoteRequestModal from "./QuoteRequestModal";
 
 function formatDate(dateStr) {
   if (!dateStr) return "-";
@@ -16,7 +18,7 @@ function formatDate(dateStr) {
 }
 
 function formatCurrency(value, currency = "IDR") {
-  if (value == null) return "-"; // Handle show_total = 0 (Hide rates)
+  if (value == null) return "-";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
@@ -29,6 +31,9 @@ export default function QuotationList() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  
+  // 2. Tambahkan state untuk Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -42,7 +47,6 @@ export default function QuotationList() {
            return;
         }
 
-        // Memanggil endpoint customer terbaru
         const json = await apiFetch("/crm/Api_customer/quotations");
 
         if (json?.status === false) {
@@ -85,9 +89,9 @@ export default function QuotationList() {
           </div>
         </div>
 
-       {/* === AREA KONTEN === */}
+        {/* === AREA KONTEN === */}
         
-        {/* 1. Loading State (Glassmorphism) */}
+        {/* 1. Loading State */}
         {loading && (
           <div className="flex flex-col items-center justify-center p-16 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-4"></div>
@@ -95,7 +99,7 @@ export default function QuotationList() {
           </div>
         )}
 
-        {/* 2. Error State (Glassmorphism) */}
+        {/* 2. Error State */}
         {!loading && errorMsg && (
           <div className="flex flex-col items-center justify-center p-16 text-center bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
             <div className="bg-red-500/20 text-red-300 p-4 rounded-full mb-4">
@@ -114,21 +118,17 @@ export default function QuotationList() {
           </div>
         )}
 
-        {/* 3. Empty State (TRANSPARAN MENYATU DENGAN TEMA) */}
+        {/* 3. Empty State (TRANSPARAN) */}
         {!loading && !errorMsg && rows.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 px-4 text-center min-h-[500px] w-full">
-            
-            {/* Ikon dengan efek menyala ringan (Glow) */}
             <div className="relative mb-8">
               <div className="absolute inset-0 bg-blue-400 rounded-full blur-2xl opacity-20 animate-pulse"></div>
               
-              {/* Lingkaran Ikon Glassmorphism */}
               <div className="relative w-28 h-28 bg-white/5 backdrop-blur-md text-white rounded-full flex items-center justify-center border border-white/10 shadow-2xl">
                 <svg className="w-12 h-12 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 
-                {/* Badge Kuning */}
                 <div className="absolute -bottom-1 -right-1 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg text-[#0a2558]">
                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4"></path>
@@ -137,7 +137,6 @@ export default function QuotationList() {
               </div>
             </div>
 
-            {/* Teks Putih Bersih */}
             <h3 className="text-3xl font-bold text-white mb-3 tracking-wide">
               No Quotations Found
             </h3>
@@ -146,7 +145,6 @@ export default function QuotationList() {
               When our sales team sends you a quote, it will safely land here.
             </p>
 
-            {/* Tombol Aksi */}
             <div className="flex flex-col sm:flex-row gap-4">
               <button 
                 onClick={() => window.location.reload()}
@@ -158,18 +156,18 @@ export default function QuotationList() {
                 Refresh
               </button>
               
+              {/* 3. Ubah onClick untuk memanggil modal */}
               <button 
-                onClick={() => window.location.href = 'mailto:sales@gateway-id.com'}
+                onClick={() => setIsModalOpen(true)}
                 className="px-6 py-2.5 bg-yellow-400 text-[#0a2558] font-bold rounded-lg hover:bg-yellow-500 transition-all shadow-lg flex items-center justify-center"
               >
                 Contact Sales
               </button>
             </div>
-            
           </div>
         )}
 
-        {/* 4. Data Table (MUNCUL KOTAK PUTIH HANYA JIKA ADA DATA) */}
+        {/* 4. Data Table */}
         {!loading && !errorMsg && rows.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
@@ -234,7 +232,21 @@ export default function QuotationList() {
             </div>
           </div>
         )}
+        
       </div>
+
+      {/* 4. Render Komponen Modal di luar container utama */}
+      <QuoteRequestModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        // Kirim data dummy/general karena ini dari halaman empty state (bukan dari rate spesifik)
+        rateData={{
+          origin: "ANY ORIGIN",
+          destination: "ANY DESTINATION",
+          serviceType: "General Freight Inquiry",
+          carrier: "-"
+        }}
+      />
     </GclLayout>
   );
 }

@@ -1010,60 +1010,86 @@ export default function SchedulePage() {
     setShowModal(true);
   };
 
-  // --- HANDLER: SUBMIT BOOKING KE API ---
-  const handleSubmitBooking = async (formData) => {
-    Swal.fire({
-        title: 'Saving Booking...',
-        text: 'Sending data to Gateway server',
-        allowOutsideClick: false,
-        background: '#0f172a', 
-        color: '#f8fafc',
-        didOpen: () => Swal.showLoading()
+  /// --- HANDLER: SUBMIT BOOKING KE API ---
+const handleSubmitBooking = async (formData) => {
+  Swal.fire({
+    title: "Saving Booking...",
+    text: "Sending data to Gateway server",
+    allowOutsideClick: false,
+    background: "#0f172a",
+    color: "#f8fafc",
+    didOpen: () => Swal.showLoading(),
+  });
+
+  try {
+    const token = localStorage.getItem("gcl_access_token");
+    if (!token) throw new Error("Please login first.");
+
+    const payload = new URLSearchParams();
+
+    Object.keys(formData).forEach((key) => {
+      const val =
+        formData[key] === null || formData[key] === undefined
+          ? ""
+          : formData[key];
+
+      payload.append(key, val);
     });
 
-    try {
-        const token = localStorage.getItem("gcl_access_token");
-        if (!token) throw new Error("Please login first.");
+    payload.append(
+      "user_first_name",
+      localStorage.getItem("username") || "User App"
+    );
 
-        const payload = new URLSearchParams();
-        Object.keys(formData).forEach(key => {
-            const val = formData[key] === null || formData[key] === undefined ? "" : formData[key];
-            payload.append(key, val);
-        });
-
-        payload.append("user_first_name", localStorage.getItem("username") || "User App");
-        if (!formData.origin_country) payload.append("origin_country", "INDONESIA");
-
-        const response = await apiFetch("/instant_booking", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: payload
-        });
-
-        const json = await response.json();
-
-        if (!response.ok) throw new Error(json.message || `Server Error: ${response.status}`);
-        if (json.error || (json.status && json.status !== 201)) throw new Error(json.message || "Failed to save booking.");
-
-        await Swal.fire({
-            icon: 'success',
-            title: 'Booking Created!',
-            text: json.message || 'Booking successfully saved.',
-            background: '#0f172a', color: '#f8fafc', confirmButtonColor: '#22d3ee'
-        });
-
-        setShowModal(false);
-
-    } catch (error) {
-        console.error("Submit Error:", error);
-        Swal.fire({
-            icon: 'error', title: 'Failed', text: error.message,
-            background: '#0f172a', color: '#f8fafc', confirmButtonColor: '#ef4444'
-        });
+    if (!formData.origin_country) {
+      payload.append("origin_country", "INDONESIA");
     }
-  };
+
+    // apiFetch langsung return JSON, jangan pakai response.json()
+    const json = await apiFetch("/instant_booking", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: payload,
+    });
+
+    console.log("instant_booking response:", json);
+
+    const isSuccess =
+      json?.error === 0 ||
+      Number(json?.status) === 201 ||
+      json?.status === true ||
+      json?.status === "success";
+
+    if (!isSuccess) {
+      throw new Error(json?.message || "Failed to save booking.");
+    }
+
+    await Swal.fire({
+      icon: "success",
+      title: "Booking Created!",
+      text: json.message || "Booking successfully saved.",
+      background: "#0f172a",
+      color: "#f8fafc",
+      confirmButtonColor: "#22d3ee",
+    });
+
+    setShowModal(false);
+    setSelectedSchedule(null);
+  } catch (error) {
+    console.error("Submit Error:", error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Failed",
+      text: error.message || "Something went wrong.",
+      background: "#0f172a",
+      color: "#f8fafc",
+      confirmButtonColor: "#ef4444",
+    });
+  }
+};
 
 
   useEffect(() => {
