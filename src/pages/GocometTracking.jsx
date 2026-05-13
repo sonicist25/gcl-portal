@@ -1373,7 +1373,7 @@ const aisDisplayPath = useMemo(() => {
                                 <strong>{step.vessel}</strong>
                                 {step.container && (
                                   <span className="container-chip">
-                                    📦 Container No: {step.container}
+                                    📦 {step.container}
                                   </span>
                                 )}
                               </div>
