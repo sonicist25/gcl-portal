@@ -379,6 +379,20 @@ button {
   border-top: 3px dashed #facc15;
 }
 
+.container-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #bae6fd;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 /* =========================================
    6. EMPTY STATE & LOADING INDICATORS
    ========================================= */

@@ -1371,7 +1371,11 @@ const aisDisplayPath = useMemo(() => {
                               <span className="v-icon">🚢</span>
                               <div className="v-detail">
                                 <strong>{step.vessel}</strong>
-                                {step.container && <span> • {step.container}</span>}
+                                {step.container && (
+                                  <span className="container-chip">
+                                    📦 Container No: {step.container}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           )}
