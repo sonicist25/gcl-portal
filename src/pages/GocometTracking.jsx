@@ -754,6 +754,8 @@ function GocometTracking({ defaultSiNumber = "" }) {
   const podPoint = useMemo(() => parsePointString(headerObj?.pod_point), [headerObj]);
   const potPoint = useMemo(() => parsePointString(headerObj?.pot_point), [headerObj]);
 
+  const hasHeaderRoutePoints = !!(polPoint || potPoint || podPoint);
+
   const latestAisPoint = useMemo(() => {
     // Current cargo marker hanya boleh tampil kalau API mengirim ais_current valid.
     // Jangan fallback ke AIS history, karena history bukan posisi cargo current.
@@ -1231,27 +1233,28 @@ const aisDisplayPath = useMemo(() => {
 
                       {mapMode === "fallback" && (
                         <>
-                          {fallbackMapPath.map((pos, i) => (
-                            <Marker
-                              key={`fallback-${i}`}
-                              position={pos}
-                              icon={
-                                i === 0
-                                  ? polIcon
-                                  : i === fallbackMapPath.length - 1
-                                  ? podIcon
-                                  : startTrackIcon
-                              }
-                            >
-                              <Popup>
-                                {i === 0
-                                  ? "Origin"
-                                  : i === fallbackMapPath.length - 1
-                                  ? "Destination"
-                                  : `Route Point ${i + 1}`}
-                              </Popup>
-                            </Marker>
-                          ))}
+                          {!hasHeaderRoutePoints &&
+                            fallbackMapPath.map((pos, i) => (
+                              <Marker
+                                key={`fallback-${i}`}
+                                position={pos}
+                                icon={
+                                  i === 0
+                                    ? polIcon
+                                    : i === fallbackMapPath.length - 1
+                                    ? podIcon
+                                    : startTrackIcon
+                                }
+                              >
+                                <Popup>
+                                  {i === 0
+                                    ? "Origin"
+                                    : i === fallbackMapPath.length - 1
+                                    ? "Destination"
+                                    : `Route Point ${i + 1}`}
+                                </Popup>
+                              </Marker>
+                            ))}
 
                           {/* PERBAIKAN 3: Gunakan fallbackRouteLine agar melewati Transhipment Port (Ungu) */}
                           {fallbackRouteLine.length > 1 && (
