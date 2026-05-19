@@ -4,7 +4,7 @@ import {
   Boxes,
   CalendarDays,
   ChevronDown,
-  Clock, // <-- 1. TAMBAHKAN IMPORT CLOCK
+  Clock,
   DollarSign,
   Eye,
   Filter,
@@ -79,21 +79,30 @@ function formatDate(v) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(d);
 }
 
-function daysToValidity(v) {
-  const s = clean(v, "");
-  if (!s || s === "-") return null;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const d = new Date(`${s}T00:00:00`); d.setHours(0, 0, 0, 0);
-  if (Number.isNaN(d.getTime())) return null;
-  return Math.round((d.getTime() - today.getTime()) / 86400000);
-}
+// Fungsi Format Tanggal From - To (Cth: 14 May - 30 Jun 2026)
+function formatValidityRange(fromDate, toDate) {
+  if (!toDate || toDate === "-") return "-";
+  
+  const formatShort = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
 
-function validityTone(v) {
-  const diff = daysToValidity(v);
-  if (diff === null) return "bg-white/10 text-slate-300 border-white/10";
-  if (diff < 0) return "bg-rose-500/15 text-rose-300 border-rose-400/30";
-  if (diff <= 7) return "bg-amber-500/15 text-amber-300 border-amber-400/30";
-  return "bg-emerald-500/15 text-emerald-300 border-emerald-400/30";
+  const getYear = (dateStr) => {
+    const d = new Date(`${dateStr}T00:00:00`);
+    return isNaN(d.getTime()) ? "" : d.getFullYear();
+  };
+
+  const fromPart = formatShort(fromDate);
+  const toPart = formatShort(toDate);
+  const yearPart = getYear(toDate);
+
+  if (fromPart && fromPart !== toPart) {
+    return `${fromPart} - ${toPart} ${yearPart}`;
+  }
+  return `${toPart} ${yearPart}`;
 }
 
 function cargoTone(type) {
@@ -177,21 +186,17 @@ function SearchInput({ value, onChange }) {
   );
 }
 
-// 2. UPDATE LCL PREVIEW: Tampilkan Priority, Harga, Route dan Transit Time
 function LclPreview({ rate }) {
   const count = Number(rate.lcl_count || 0);
-  const price = rate.lcl_price; // Telah disesuaikan dari loadPricing
+  const price = rate.lcl_price; 
   const isPriority = Number(rate.lcl_is_priority) === 1;
 
   if (!count || price === null || price === undefined) {
-    return <span className="text-slate-500">-</span>;
+    return <span className="text-slate-600">-</span>;
   }
 
   return (
     <div className="flex flex-col items-end leading-tight text-right">
-      {isPriority && (
-        <span className="mb-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400">PRIORITY</span>
-      )}
       <div className={clsx("font-bold", price === "FREE" ? "text-amber-300" : "text-cyan-300")}>
         {price === "FREE" ? "FREE" : money(price)}
         {price !== "FREE" && <span className="ml-1 text-amber-300">*</span>}
@@ -242,35 +247,59 @@ function InfoBox({ title, content, tone }) {
 }
 
 // ==============================================================================
-// 3. SEA RATES DETAIL MODAL
+// 3. SEA RATES DETAIL MODAL (MODAL 2 TAB: FCL & LCL)
 // ==============================================================================
 
 function PricingDetailModal({ open, onClose, loading, error, detail }) {
+  const [activeTab, setActiveTab] = useState("fcl");
+
+  useEffect(() => {
+    if (open) setActiveTab("fcl");
+  }, [open]);
+
   const header = detail?.header || {};
-  const lclRaw = Array.isArray(detail?.lcl) ? detail.lcl : [];
-  const dataRaw = detail?.data || {};
+  const lclRoutesRaw = Array.isArray(detail?.lcl_routes) ? detail.lcl_routes : (Array.isArray(detail?.lcl) ? detail.lcl : []);
+  const fclDataRaw = detail?.fcl_data || detail?.data || {};
+  const lclDataRaw = detail?.lcl_data || {};
 
-  // UPDATE DI SINI: Tambahkan .slice(0, 1) untuk hanya mengambil 1 data teratas
-  const validLcl = lclRaw
-    .map(x => ({ ...x, price: calcLcl(x.price) }))
-    .filter((x) => x?.price !== null)
-    .slice(0, 1); // <--- Baris ini yang ditambahkan
-  
-  const componentGroups = Object.entries(dataRaw).map(([groupName, rows]) => {
-    return [
-      groupName,
-      (Array.isArray(rows) ? rows : []).map(item => ({
-        ...item,
-        "20": calcFcl(item["20"]),
-        "40": calcFcl(item["40"]),
-        "40hc": calcFcl(item["40hc"])
-      }))
-    ];
-  });
+  // Pemrosesan Komponen FCL
+  const fclGroups = Object.entries(fclDataRaw).map(([groupName, rows]) => [
+    groupName,
+    (Array.isArray(rows) ? rows : []).map(item => ({
+      ...item,
+      name: item.component_name || item.name,
+      unit: item.unit_basis || "Per Container",
+      "20": calcFcl(item.price_20 || item["20"]),
+      "40": calcFcl(item.price_40 || item["40"]),
+      "40hc": calcFcl(item.price_40hc || item["40hc"])
+    }))
+  ]);
 
-  const totals = useMemo(() => {
+  // Pemrosesan Komponen LCL
+  const lclGroups = Object.entries(lclDataRaw).map(([groupName, rows]) => [
+    groupName,
+    (Array.isArray(rows) ? rows : []).map(item => ({
+      ...item,
+      name: item.service_name || item.name,
+      unit: item.unit_basis || "W/M",
+      price: calcLcl(item.price_wm || item.price)
+    }))
+  ]);
+
+  // Ekstrak rute LCL yang berstatus priority (is_priority === 1)
+  let priorityLclRoutes = lclRoutesRaw.filter(rt => rt.price !== null && rt.price !== "" && Number(rt.is_priority) === 1);
+
+  // Fallback: Jika prioritas kosong, otomatis cari dan gunakan Direct Consol
+  if (priorityLclRoutes.length === 0) {
+    const fallbackRoute = lclRoutesRaw.find(rt => rt.price !== null && rt.price !== "" && rt.type_name === "Direct Consol");
+    if (fallbackRoute) {
+      priorityLclRoutes = [fallbackRoute];
+    }
+  }
+
+  const fclTotals = useMemo(() => {
     const t = { "20": null, "40": null, "40hc": null };
-    componentGroups.forEach(([, rows]) => {
+    fclGroups.forEach(([, rows]) => {
       rows.forEach((item) => {
         ["20", "40", "40hc"].forEach((key) => {
           if (item[key] !== null) t[key] = (t[key] || 0) + item[key];
@@ -278,7 +307,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
       });
     });
     return t;
-  }, [componentGroups]);
+  }, [fclGroups]);
 
   if (!open) return null;
 
@@ -287,6 +316,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={onClose} />
       <div className="relative flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[34px] border border-white/10 bg-slate-900 shadow-2xl shadow-black/50">
         
+        {/* Modal Header */}
         <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-white/[0.04] px-6 py-5">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
@@ -294,7 +324,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
             </div>
             <div>
               <h2 className="text-xl font-black uppercase tracking-wide text-white">{clean(header.liner_name, "Pricing Detail")}</h2>
-              <p className="mt-1 text-sm text-slate-400">Freight rate ID #{header.id || "-"}</p>
+              <p className="mt-1 text-sm text-slate-400">{detail?.routeName || `Freight rate ID #${header.id || "-"}`}</p>
             </div>
             <span className={clsx("rounded-full border px-3 py-1 text-xs font-bold", cargoTone(header.cargo_type))}>
               {clean(header.cargo_type, "GENCO")}
@@ -310,6 +340,38 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
           </button>
         </div>
 
+        {/* Floating Pill Tab Bar */}
+        <div className="flex border-b border-white/10 bg-slate-900/50 p-6 justify-center">
+          <div className="inline-flex gap-4 rounded-full bg-slate-950/70 p-2 border border-white/10 shadow-lg backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setActiveTab("fcl")}
+              className={clsx(
+                "flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-300 transform hover:scale-105",
+                activeTab === "fcl"
+                  ? "bg-amber-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.5)]"
+                  : "text-slate-400 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <Ship className="h-5 w-5" /> FCL Rates
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("lcl")}
+              className={clsx(
+                "flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-300 transform hover:scale-105",
+                activeTab === "lcl"
+                  ? "bg-amber-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.5)]"
+                  : "text-slate-400 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <Boxes className="h-5 w-5" /> LCL Rates
+            </button>
+          </div>
+        </div>
+
+
+        {/* Modal Body */}
         <div className="overflow-y-auto p-6">
           {loading ? (
             <div className="grid gap-4">
@@ -320,92 +382,147 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
             <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-6 text-rose-200">{error}</div>
           ) : (
             <>
-              <div className="mb-6 grid gap-4 md:grid-cols-4">
-                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Validity</p>
-                  <p className="mt-2 font-semibold text-white">{formatDate(header.validity_period)}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Free Time</p>
-                  <p className="mt-2 font-semibold text-white">{clean(header.free_time)}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Transit Time</p>
-                  <p className="mt-2 font-semibold text-white">{clean(header.transit_time)}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Remarks</p>
-                  <p className="mt-2 font-semibold text-white">{clean(header.inland_moda)}</p>
-                </div>
-              </div>
+              {/* TAB CONTENT: FCL PANE */}
+              {activeTab === "fcl" && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="overflow-x-auto rounded-3xl border border-white/10">
+                    <table className="w-full min-w-[850px] border-collapse text-sm">
+                      <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
+                        <tr>
+                          <th className="px-4 py-4 text-left">Component</th>
+                          <th className="px-4 py-4 text-center">Unit</th>
+                          <th className="px-4 py-4 text-right">20'</th>
+                          <th className="px-4 py-4 text-right">40'</th>
+                          <th className="px-4 py-4 text-right">40'HC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fclGroups.length === 0 ? (
+                          <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">No FCL pricing component found.</td></tr>
+                        ) : (
+                          fclGroups.map(([groupName, rows]) => (
+                            <span key={groupName} className="contents">
+                              <tr className="border-t border-white/10 bg-white/[0.04]">
+                                <td colSpan={5} className="px-4 py-2.5 text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                                  {groupName}
+                                </td>
+                              </tr>
+                              {rows.map((item, idx) => (
+                                <tr key={`${groupName}-${idx}`} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05]">
+                                  <td className="px-4 py-4 font-medium text-white">{clean(item.name)}</td>
+                                  <td className="px-4 py-4 text-center text-slate-400 text-[12px]">{clean(item.unit)}</td>
+                                  <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["20"])}</td>
+                                  <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["40"])}</td>
+                                  <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["40hc"])}</td>
+                                </tr>
+                              ))}
+                            </span>
+                          ))
+                        )}
+                        <tr className="border-t-2 border-cyan-300/30 bg-cyan-300/10">
+                          <td colSpan={2} className="px-4 py-4 text-base font-black text-white">TOTAL ALL IN</td>
+                          <td className="px-4 py-4 text-right text-base font-black text-emerald-300">{money(fclTotals["20"])}</td>
+                          <td className="px-4 py-4 text-right text-base font-black text-emerald-300">{money(fclTotals["40"])}</td>
+                          <td className="px-4 py-4 text-right text-base font-black text-emerald-300">{money(fclTotals["40hc"])}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="mb-6 overflow-x-auto rounded-3xl border border-white/10">
-                <table className="w-full min-w-[900px] border-collapse text-sm">
-                  <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
-                    <tr>
-                      <th className="px-4 py-4 text-left">Component</th>
-                      <th className="px-4 py-4 text-right">20'</th>
-                      <th className="px-4 py-4 text-right">40'</th>
-                      <th className="px-4 py-4 text-right">40'HC</th>
-                      
-                      {/* 3. UPDATE LCL HEADER DI MODAL DETAIL */}
-                      {validLcl.map((item) => (
-                        <th key={item.id} className="px-4 py-4 text-right text-cyan-300">
-                          <div className="flex flex-col items-end gap-1">
-                            <span>LCL</span>
-                            <span className="text-[10px] normal-case tracking-normal text-slate-500">{item.type_name}</span>
-                            {Number(item.is_priority) === 1 && (
-                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400 uppercase">Priority</span>
-                            )}
-                            {item.transit_time && (
-                              <span className="flex items-center gap-1 text-[10px] normal-case tracking-normal text-slate-400">
-                                <Clock className="h-3 w-3" /> {item.transit_time}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {componentGroups.length === 0 ? (
-                      <tr><td colSpan={4 + validLcl.length} className="px-4 py-10 text-center text-slate-400">No pricing component found.</td></tr>
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <InfoBox title="Include of Rate" tone="emerald" content={header.fcl_include_rate || header.include_rate} />
+                    <InfoBox title="Exclude of Rate" tone="rose" content={header.fcl_exclude_rate || header.exclude_rate} />
+                    <InfoBox title="Remarks" tone="amber" content={header.fcl_remarks || header.inland_moda} />
+                    <InfoBox title="Free Time (D&D)" tone="cyan" content={header.fcl_free_time || header.free_time} />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB CONTENT: LCL PANE */}
+              {activeTab === "lcl" && (
+                <div className="space-y-6 animate-fadeIn">
+                  
+                  {/* HANYA MUNCULKAN RUTE PRIORITY */}
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-400 mb-3">LCL Rates</p>
+                    {priorityLclRoutes.length === 0 ? (
+                      <div className="rounded-[24px] border border-dashed border-white/10 p-6 text-center text-sm text-slate-400">
+                        No LCL rates available.
+                      </div>
                     ) : (
-                      componentGroups.map(([groupName, rows]) => (
-                        <span key={groupName} className="contents">
-                          <tr className="border-t border-white/10 bg-white/[0.04]">
-                            <td colSpan={4 + validLcl.length} className="px-4 py-3 text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                              {groupName}
-                            </td>
-                          </tr>
-                          {rows.map((item, idx) => (
-                            <tr key={`${groupName}-${idx}`} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05]">
-                              <td className="px-4 py-4 font-medium text-white">{clean(item.name)}</td>
-                              <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["20"])}</td>
-                              <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["40"])}</td>
-                              <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["40hc"])}</td>
-                              {validLcl.map((x) => <td key={x.id} className="px-4 py-4 text-right text-slate-500">-</td>)}
-                            </tr>
-                          ))}
-                        </span>
-                      ))
+                      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+                        {priorityLclRoutes.map((rt, idx) => {
+                          const processedPrice = calcLcl(rt.price);
+                          return (
+                            <div key={idx} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 flex flex-col justify-between">
+                              <div>
+                                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1">
+                                  {rt.type_name}
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                </span>
+                                <span className="text-lg font-black text-amber-300 mt-1 block">
+                                  {processedPrice === "FREE" ? "FREE" : money(processedPrice)}
+                                </span>
+                              </div>
+                              {rt.transit_time && (
+                                <span className="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-slate-500" /> {rt.transit_time}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
-                    <tr className="border-t-2 border-cyan-300/30 bg-cyan-300/10">
-                      <td className="px-4 py-4 text-base font-black text-white">TOTAL ALL IN</td>
-                      <td className="px-4 py-4 text-right text-base font-black text-emerald-300">{money(totals["20"])}</td>
-                      <td className="px-4 py-4 text-right text-base font-black text-emerald-300">{money(totals["40"])}</td>
-                      <td className="px-4 py-4 text-right text-base font-black text-emerald-300">{money(totals["40hc"])}</td>
-                      {validLcl.map((x) => <td key={x.id} className="px-4 py-4 text-right text-base font-black text-cyan-300">{money(x.price)}</td>)}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                  </div>
 
-              {/* 4. TAMBAHKAN KOTAK INFO FCL TRANSIT TIME */}
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
-                <InfoBox title="Include of Rate" tone="emerald" content={header.include_rate} />
-                <InfoBox title="Exclude of Rate" tone="rose" content={header.exclude_rate} />
-              </div>
+                  {/* SEMBUNYIKAN TABEL JIKA KOMPONEN KOSONG */}
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-400 mb-3 mt-2">Local & Freight Charges</p>
+                    {lclGroups.length === 0 ? (
+                      <div className="rounded-[24px] border border-dashed border-white/10 p-8 text-center text-sm text-slate-400 mb-6">
+                        No additional LCL charges or components found.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-3xl border border-white/10 mb-6">
+                        <table className="w-full min-w-[600px] border-collapse text-sm">
+                          <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
+                            <tr>
+                              <th className="px-4 py-4 text-left">Component</th>
+                              <th className="px-4 py-4 text-center">Unit</th>
+                              <th className="px-4 py-4 text-right pr-6">Price</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lclGroups.map(([groupName, rows]) => (
+                              <span key={groupName} className="contents">
+                                <tr className="border-t border-white/10 bg-white/[0.04]">
+                                  <td colSpan={3} className="px-4 py-2.5 text-xs font-black uppercase tracking-[0.22em] text-amber-300">
+                                    {groupName}
+                                  </td>
+                                </tr>
+                                {rows.map((item, idx) => (
+                                  <tr key={`${groupName}-${idx}`} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05]">
+                                    <td className="px-4 py-3.5 font-medium text-white">{clean(item.name)}</td>
+                                    <td className="px-4 py-3.5 text-center text-slate-400 text-[12px]">{clean(item.unit)}</td>
+                                    <td className="px-4 py-3.5 text-right pr-6 font-mono text-emerald-400 font-semibold">{money(item.price)}</td>
+                                  </tr>
+                                ))}
+                              </span>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                    <InfoBox title="LCL Include" tone="emerald" content={header.lcl_include_rate} />
+                    <InfoBox title="LCL Exclude" tone="rose" content={header.lcl_exclude_rate} />
+                    <InfoBox title="LCL Remarks" tone="amber" content={header.lcl_remarks} />
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -450,7 +567,6 @@ export default function PricingPage() {
           route,
           rates: rates.map((r) => ({
             ...r,
-            // 5. PASTIKAN MAP PROPERTY BARU lcl_price BUKAN min_lcl_price
             lcl_price: calcLcl(r.lcl_price), 
             prices: {
               "20": calcFcl(r?.prices?.["20"]),
@@ -702,10 +818,9 @@ export default function PricingPage() {
                               <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
                                 <tr>
                                   <th className="px-4 py-4 text-left">Liner</th>
-                                  <th className="px-4 py-4 text-center">Type</th>
-                                  <th className="px-4 py-4 text-center">Validity</th>
-                                  {/* 6. TAMBAH HEADER FCL TRANSIT DI SINI */}
-                                  <th className="px-4 py-4 text-center text-info">FCL Transit</th>
+                                  <th className="px-4 py-4 text-left">Type</th>
+                                  <th className="px-4 py-4 text-left">Validity</th>
+                                  <th className="px-4 py-4 text-left">Transit Time</th>
                                   <th className="px-4 py-4 text-right">20' All-In</th>
                                   <th className="px-4 py-4 text-right">40' All-In</th>
                                   <th className="px-4 py-4 text-right">40'HC All-In</th>
@@ -714,43 +829,69 @@ export default function PricingPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {group.rates.map((rate) => (
-                                  <tr key={rate.id} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05]">
-                                    <td className="px-4 py-4">
-                                      <div className="flex items-center gap-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-cyan-200">
-                                          <Ship className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                          <p className="font-bold text-white">{rate.liner_name}</p>
-                                          <p className="text-xs text-slate-500">ID #{rate.id}</p>
-                                        </div>
-                                      </div>
+                                {group.rates.map((rate, idx) => (
+                                  <tr key={rate.id || idx} className="border-b border-slate-800/50 hover:bg-white/[0.02] transition-colors text-[13px]">
+                                    
+                                    {/* 1. Liner Name */}
+                                    <td className="px-4 py-3 font-semibold text-white align-middle whitespace-nowrap">
+                                      {clean(rate.liner_name)}
                                     </td>
-                                    <td className="px-4 py-4 text-center">
-                                      <span className={clsx("rounded-full border px-3 py-1 text-xs font-bold", cargoTone(rate.cargo_type))}>
-                                        {rate.cargo_type}
+
+                                    {/* 2. Cargo Type Badge */}
+                                    <td className="px-4 py-3 align-middle">
+                                      {(() => {
+                                        const ctype = rate.cargo_type || "GENCO";
+                                        return (
+                                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${cargoTone(ctype)} uppercase shadow-sm whitespace-nowrap`}>
+                                            {ctype}
+                                          </span>
+                                        );
+                                      })()}
+                                    </td>
+
+                                    {/* 3. Validity (Dipisah dari transit time) */}
+                                    <td className="px-4 py-3 align-middle text-left whitespace-nowrap">
+                                      <span className="text-slate-200 inline-flex items-center text-[12px]">
+                                        <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-cyan-400" />
+                                        {formatValidityRange(rate.fcl_validity_from, rate.validity_period)}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-4 text-center">
-                                      <span className={clsx("rounded-full border px-3 py-1 text-xs", validityTone(rate.validity_period))}>
-                                        {formatDate(rate.validity_period)}
+
+                                    {/* 4. Transit Time (Tidak bold) */}
+                                    <td className="px-4 py-3 align-middle text-left whitespace-nowrap">
+                                      <span className="text-slate-400 font-normal text-[12px] inline-flex items-center">
+                                        <Clock className="mr-1.5 h-3.5 w-3.5 text-slate-500" />
+                                        {rate.fcl_transit_time || "-"}
                                       </span>
                                     </td>
-                                    {/* 7. MAP VALUE FCL TRANSIT TIME DI SINI */}
-                                    <td className="px-4 py-4 text-center font-semibold text-slate-300">
-                                      {clean(rate.fcl_transit_time)}
+
+                                    {/* 5. Price 20' */}
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
+                                      {rate.prices?.["20"] > 0 ? `$${Number(rate.prices["20"]).toFixed(2)}` : "-"}
                                     </td>
-                                    <td className="px-4 py-4 text-right font-mono font-bold text-emerald-300">{money(rate.prices["20"])}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-bold text-emerald-300">{money(rate.prices["40"])}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-bold text-emerald-300">{money(rate.prices["40HC"])}</td>
-                                    <td className="px-4 py-4 text-right"><LclPreview rate={rate} /></td>
-                                    <td className="px-4 py-4 text-right">
+
+                                    {/* 6. Price 40' */}
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
+                                      {rate.prices?.["40"] > 0 ? `$${Number(rate.prices["40"]).toFixed(2)}` : "-"}
+                                    </td>
+
+                                    {/* 7. Price 40'HC */}
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
+                                      {rate.prices?.["40HC"] > 0 ? `$${Number(rate.prices["40HC"]).toFixed(2)}` : "-"}
+                                    </td>
+
+                                    {/* 8. LCL Column */}
+                                    <td className="px-4 py-3 text-right align-middle font-semibold text-cyan-400 whitespace-nowrap">
+                                      <LclPreview rate={rate} />
+                                    </td>
+
+                                    {/* 9. Action / Detail Button */}
+                                    <td className="px-4 py-3 text-right align-middle">
                                       <button
                                         onClick={() => openDetail(rate, group.route)}
-                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 text-xs font-bold text-cyan-200 transition hover:bg-cyan-300/20"
+                                        className="inline-flex h-8 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-3 text-xs font-bold text-cyan-400 transition hover:bg-cyan-500 hover:text-slate-950"
                                       >
-                                        <Eye className="h-4 w-4" /> Detail
+                                        Detail
                                       </button>
                                     </td>
                                   </tr>
@@ -760,7 +901,6 @@ export default function PricingPage() {
                           )}
 
                           {tab === "air" && (
-                            //... (KODE TABEL AIR TETAP SAMA)
                             <table className="w-full min-w-[1250px] border-collapse text-sm">
                               <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
                                 <tr>
@@ -778,38 +918,38 @@ export default function PricingPage() {
                               </thead>
                               <tbody>
                                 {group.rates.map((rate, idx) => (
-                                  <tr key={`air-${idx}`} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05]">
-                                    <td className="px-4 py-4">
+                                  <tr key={`air-${idx}`} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-[13px]">
+                                    <td className="px-4 py-3">
                                       <div className="flex items-center gap-3">
                                         {AIRLINE_LOGOS[rate.airline_code] ? (
-                                          <img src={AIRLINE_LOGOS[rate.airline_code]} alt={rate.airline_code} className="h-8 w-auto rounded object-contain bg-white p-1" />
+                                          <img src={AIRLINE_LOGOS[rate.airline_code]} alt={rate.airline_code} className="h-8 w-14 rounded object-contain bg-white p-1" />
                                         ) : (
-                                          <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-cyan-200">
+                                          <div className="flex h-8 w-14 items-center justify-center rounded border border-white/10 bg-white/10 text-cyan-200">
                                             <Plane className="h-4 w-4" />
                                           </div>
                                         )}
                                         <div>
                                           <p className="font-bold text-white">{rate.airline}</p>
-                                          <p className="text-[10px] uppercase text-amber-300">Valid: {formatDate(rate.valid)}</p>
+                                          <p className="text-[10px] uppercase text-amber-300 mt-0.5">Valid: {formatDate(rate.valid)}</p>
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="px-4 py-4 text-center">
-                                      <span className={clsx("rounded-full border px-3 py-1 text-xs font-bold", cargoTone(rate.shc))}>
+                                    <td className="px-4 py-3 text-center align-middle">
+                                      <span className={clsx("rounded-md border px-2 py-0.5 text-[11px] font-medium shadow-sm uppercase", cargoTone(rate.shc))}>
                                         {rate.shc}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-slate-300">{money(rate.minimum, true)}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-emerald-300">{money(rate.normal, true)}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-emerald-300">{money(rate.rate_45, true)}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-emerald-300">{money(rate.rate_100, true)}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-emerald-300">{money(rate.rate_300, true)}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-emerald-300">{money(rate.rate_500, true)}</td>
-                                    <td className="px-4 py-4 text-right font-mono font-semibold text-emerald-300">{money(rate.rate_1000, true)}</td>
-                                    <td className="px-4 py-4 text-right">
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-300 align-middle">{money(rate.minimum, true)}</td>
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-300 align-middle">{money(rate.normal, true)}</td>
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-300 align-middle">{money(rate.rate_45, true)}</td>
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-300 align-middle">{money(rate.rate_100, true)}</td>
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-300 align-middle">{money(rate.rate_300, true)}</td>
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-300 align-middle">{money(rate.rate_500, true)}</td>
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-300 align-middle">{money(rate.rate_1000, true)}</td>
+                                    <td className="px-4 py-3 text-right align-middle">
                                       <button
                                         onClick={() => handleOpenQuote(rate)}
-                                        className="inline-flex h-10 items-center justify-center rounded-2xl bg-cyan-400 px-4 text-xs font-bold text-slate-950 transition hover:bg-cyan-300"
+                                        className="inline-flex h-8 items-center justify-center rounded-xl bg-cyan-400 px-3 text-xs font-bold text-slate-950 transition hover:bg-cyan-300 shadow-sm shadow-cyan-400/20"
                                       >
                                         Quote
                                       </button>
