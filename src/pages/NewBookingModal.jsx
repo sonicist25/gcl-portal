@@ -193,10 +193,19 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
         const res = await fetch(`https://gateway-cl.com/api/schedule_city_dd/city_options?X-API-KEY=gateway-fms&region_id=${form.region_id}`);
         const textData = await res.text();
         if(!textData) return;
+        
         const json = JSON.parse(textData);
-        let result = json.data || (Array.isArray(json) ? json : Object.values(json));
+        
+        // --- PERBAIKAN DI SINI ---
+        // Ambil source datanya, prioritaskan json.data jika ada
+        const sourceData = json.data !== undefined ? json.data : json;
+        // Pastikan hasil akhirnya selalu berupa Array
+        let result = Array.isArray(sourceData) ? sourceData : Object.values(sourceData || {});
+        
         setCityOptions(result);
-      } catch (error) {}
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+      }
     };
     fetchCities();
   }, [form.region_id]);
@@ -209,10 +218,17 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
           const res = await fetch(url);
           const textData = await res.text();
           if(!textData) return;
+          
           const json = JSON.parse(textData);
-          let result = json.data || (Array.isArray(json) ? json : Object.values(json));
+
+          // --- PERBAIKAN DI SINI ---
+          const sourceData = json.data !== undefined ? json.data : json;
+          let result = Array.isArray(sourceData) ? sourceData : Object.values(sourceData || {});
+          
           setEtdOptions(result);
-        } catch (error) {}
+        } catch (error) {
+          console.error("Error fetching ETD:", error);
+        }
     };
     fetchEtd();
   }, [form.city_identifier]);
