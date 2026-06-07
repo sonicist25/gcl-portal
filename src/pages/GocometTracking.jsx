@@ -37,6 +37,13 @@ const startTrackIcon = L.divIcon({
   iconAnchor: [6, 6],
 });
 
+const lastAisIcon = L.divIcon({
+  className: "last-ais-marker",
+  html: `<div class="map-dot map-dot-blue"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
 const polIcon = L.divIcon({
   className: "pol-track-marker",
   html: `<div class="map-dot map-dot-green"></div>`,
@@ -215,6 +222,56 @@ const truncatePathAtDestination = (path, podPoint, thresholdKm = 120) => {
   return removeDuplicatePoints(truncated);
 };
 
+const trimPathFromNearestStart = (path, startPoint, thresholdKm = 300) => {
+  if (!Array.isArray(path) || path.length <= 1 || !startPoint) return path || [];
+
+  let nearestIndex = -1;
+  let nearestDistance = Number.MAX_SAFE_INTEGER;
+
+  path.forEach((point, index) => {
+    const d = distanceKm(point, startPoint);
+    if (d < nearestDistance) {
+      nearestDistance = d;
+      nearestIndex = index;
+    }
+  });
+
+  // Kalau history tidak pernah dekat start port, jangan trim agresif.
+  if (nearestIndex < 0 || nearestDistance > thresholdKm) {
+    return path;
+  }
+
+  // Buang track kapal sebelum cargo naik di start port.
+  return path.slice(nearestIndex);
+};
+
+const getRoutePointByPortText = (route, headerObj, polPoint, potPoint, podPoint, side) => {
+  const port =
+    side === "from"
+      ? route?.["port of loading"] || route?.port_of_loading || route?.from
+      : route?.["port of discharge"] || route?.port_of_discharge || route?.to;
+
+  const p = String(port || "").toUpperCase();
+
+  if (p.includes("JAKARTA") || p.includes("IDTPP") || p.includes(String(headerObj?.pol || "").toUpperCase())) {
+    return polPoint;
+  }
+
+  if (p.includes("SINGAPORE") || p.includes("SGSIN") || p.includes(String(headerObj?.pot || "").toUpperCase())) {
+    return potPoint;
+  }
+
+  if (
+    p.includes("AQABA") ||
+    p.includes("JOAQB") ||
+    p.includes(String(headerObj?.pod || "").toUpperCase())
+  ) {
+    return podPoint;
+  }
+
+  return null;
+};
+
 const formatDisplayDate = (value) => {
   if (!value) return "-";
 
@@ -312,6 +369,255 @@ const getAisHistoryPoints = (data) => {
     .map((item) => item.point);
 };
 
+
+
+const getAisLegs = (data) => {
+  if (!Array.isArray(data?.ais_legs)) return [];
+  return data.ais_legs.filter((leg) => leg && typeof leg === "object");
+};
+
+const getLegAisCurrentData = (leg) => {
+  if (!leg?.ais_current || Array.isArray(leg.ais_current)) return null;
+  const p = getAisCurrentPoint({ ais_current: leg.ais_current });
+  return p ? leg.ais_current : null;
+};
+
+const getLegAisCurrentPoint = (leg) => {
+  const current = getLegAisCurrentData(leg);
+  if (!current) return null;
+  return getAisCurrentPoint({ ais_current: current });
+};
+
+const getLegAisHistoryPoints = (leg) => {
+  if (!leg?.ais_history || Array.isArray(leg.ais_history)) return [];
+  return getAisHistoryPoints({ ais_history: leg.ais_history });
+};
+
+
+const normalizePoint = (value) => {
+  if (!value) return null;
+
+  if (Array.isArray(value) && value.length >= 2) {
+    const lat = Number(value[0]);
+    const lon = Number(value[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0)) {
+      return [lat, lon];
+    }
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return parsePointString(value);
+  }
+
+  if (typeof value === "object") {
+    if (Array.isArray(value.lat_lon)) {
+      return normalizePoint(value.lat_lon);
+    }
+
+    const lat = Number(value.lat ?? value.latitude ?? value.Latitude);
+    const lon = Number(value.lon ?? value.lng ?? value.longitude ?? value.Longitude);
+
+    if (Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0)) {
+      return [lat, lon];
+    }
+  }
+
+  return null;
+};
+
+const getLegStartPoint = (leg, headerPoints = {}) => {
+  return (
+    normalizePoint(leg?.start_point) ||
+    normalizePoint(leg?.startPoint) ||
+    getMatchedHeaderPointForPort(getLegPortFrom(leg), headerPoints.headerObj, headerPoints) ||
+    null
+  );
+};
+
+const getLegEndPoint = (leg, headerPoints = {}) => {
+  return (
+    normalizePoint(leg?.end_point) ||
+    normalizePoint(leg?.endPoint) ||
+    getMatchedHeaderPointForPort(getLegPortTo(leg), headerPoints.headerObj, headerPoints) ||
+    null
+  );
+};
+
+const getLegCargoCurrentData = (leg) => {
+  if (!leg?.cargo_current || Array.isArray(leg.cargo_current)) return null;
+  const p = normalizePoint(leg.cargo_current);
+  return p ? leg.cargo_current : null;
+};
+
+const getLegCargoCurrentPoint = (leg) => {
+  return normalizePoint(leg?.cargo_current) || getLegAisCurrentPoint(leg);
+};
+
+const getLegCargoCurrentSource = (leg) => {
+  return leg?.cargo_current_source || (getLegAisCurrentPoint(leg) ? "jarvis_current" : "none");
+};
+
+const getPointTimestamp = (value) => {
+  if (!value || typeof value !== "object") return "";
+  return (
+    value.timestamp ||
+    value.last_updated ||
+    value.lastUpdated ||
+    value.PositionLastUpdated ||
+    value.positionTime ||
+    value.time ||
+    ""
+  );
+};
+
+const buildLegActualPath = (leg, headerPoints = {}) => {
+  const pts = [];
+  const startPoint = getLegStartPoint(leg, headerPoints);
+  const endPoint = getLegEndPoint(leg, headerPoints);
+  const cargoPoint = getLegCargoCurrentPoint(leg);
+  let historyPath = removeDuplicatePoints(getLegAisHistoryPoints(leg));
+
+  if (startPoint) pts.push(startPoint);
+
+  // Backend final sudah filter history per ETD-ETA leg.
+  // Di FE, jangan lagi paksa raw history global. Cukup sambungkan start leg -> history leg -> cargo_current.
+  if (historyPath.length > 0) {
+    if (startPoint) {
+      historyPath = trimPathFromNearestStart(historyPath, startPoint, 300);
+    }
+
+    if (endPoint) {
+      historyPath = truncatePathAtDestination(historyPath, endPoint, 180);
+    }
+
+    pts.push(...historyPath);
+  }
+
+  if (cargoPoint) {
+    pts.push(cargoPoint);
+  } else if (leg?.is_completed && endPoint && pts.length === 1) {
+    // Untuk completed leg tanpa AIS titik valid, tampilkan minimal leg route.
+    pts.push(endPoint);
+  }
+
+  return removeDuplicatePoints(pts);
+};
+
+const pickDisplayLeg = (legs) => {
+  if (!Array.isArray(legs) || !legs.length) return null;
+
+  return (
+    legs.find((leg) => leg?.is_active && getLegCargoCurrentPoint(leg)) ||
+    [...legs].reverse().find((leg) => getLegCargoCurrentPoint(leg)) ||
+    legs.find((leg) => leg?.is_active) ||
+    [...legs].reverse().find((leg) => getLegAisHistoryPoints(leg).length > 0) ||
+    legs[legs.length - 1]
+  );
+};
+
+const getAisDisplayVessel = (data, activeLeg) => {
+  return (
+    activeLeg?.cargo_current?.current_vessel ||
+    activeLeg?.ais_current?.current_vessel ||
+    activeLeg?.vessel ||
+    data?.cargo_current?.current_vessel ||
+    data?.ais_current?.current_vessel ||
+    data?.header?.[0]?.[0]?.vessel ||
+    data?.header?.[0]?.vessel ||
+    "-"
+  );
+};
+
+const getAisDisplaySpeed = (data, activeLeg) => {
+  return (
+    activeLeg?.cargo_current?.speed ||
+    activeLeg?.ais_current?.speed ||
+    data?.cargo_current?.speed ||
+    data?.ais_current?.speed ||
+    "-"
+  );
+};
+
+const getAisDisplayUpdated = (data, activeLeg) => {
+  return (
+    getPointTimestamp(activeLeg?.cargo_current) ||
+    activeLeg?.ais_current?.last_updated ||
+    getPointTimestamp(data?.cargo_current) ||
+    data?.ais_current?.last_updated ||
+    ""
+  );
+};
+
+const getAisLegLabel = (leg) => {
+  if (!leg) return "-";
+  const from = leg.from || "-";
+  const to = leg.to || "-";
+  const vessel = leg.vessel || "-";
+  return `${from} → ${to} / ${vessel}`;
+};
+
+const getLegPortFrom = (leg) => {
+  return String(
+    leg?.from ||
+      leg?.["port of loading"] ||
+      leg?.port_of_loading ||
+      ""
+  );
+};
+
+const getLegPortTo = (leg) => {
+  return String(
+    leg?.to ||
+      leg?.["port of discharge"] ||
+      leg?.port_of_discharge ||
+      ""
+  );
+};
+
+const getMatchedHeaderPointForPort = (portName, headerObj, points) => {
+  if (!portName) return null;
+
+  if (headerObj?.pol && isSameLocation(portName, headerObj.pol)) {
+    return points.polPoint || null;
+  }
+
+  if (headerObj?.pot && isSameLocation(portName, headerObj.pot)) {
+    return points.potPoint || null;
+  }
+
+  if (headerObj?.pod && isSameLocation(portName, headerObj.pod)) {
+    return points.podPoint || null;
+  }
+
+  return null;
+};
+
+const shouldRoutePassPot = ({ activeLeg, headerObj, latestKnownPoint, potPoint, podPoint }) => {
+  if (!potPoint || !latestKnownPoint) return false;
+
+  const legFrom = getLegPortFrom(activeLeg);
+  const legTo = getLegPortTo(activeLeg);
+
+  // Kalau active leg sudah mulai dari POT, maka route berikutnya langsung ke POD.
+  // Contoh: SINGAPORE -> AQABA, jangan gambar lagi current -> Singapore -> Aqaba.
+  if (headerObj?.pot && legFrom && isSameLocation(legFrom, headerObj.pot)) {
+    return false;
+  }
+
+  // Kalau active leg menuju POT, expected path tetap lewat POT lalu POD.
+  if (headerObj?.pot && legTo && isSameLocation(legTo, headerObj.pot)) {
+    return true;
+  }
+
+  // Fallback untuk response lama tanpa ais_legs:
+  // pakai POT hanya kalau posisi terakhir lebih dekat ke POT daripada POD.
+  if (podPoint) {
+    return distanceKm(latestKnownPoint, potPoint) < distanceKm(latestKnownPoint, podPoint);
+  }
+
+  return true;
+};
 
 const getFixedJourneyPriority = (step) => {
   const locType = String(step?.["location type"] || step?.location_type || "").toLowerCase();
@@ -748,19 +1054,131 @@ function GocometTracking({ defaultSiNumber = "" }) {
     co2EmissionValue !== undefined &&
     Number.isFinite(Number(co2EmissionValue)) &&
     Number(co2EmissionValue) > 0;
-  const aisCurrentPoint = useMemo(() => getAisCurrentPoint(data), [data]);
-  const aisHistoryPath = useMemo(() => getAisHistoryPoints(data), [data]);
+
   const polPoint = useMemo(() => parsePointString(headerObj?.pol_point), [headerObj]);
   const podPoint = useMemo(() => parsePointString(headerObj?.pod_point), [headerObj]);
   const potPoint = useMemo(() => parsePointString(headerObj?.pot_point), [headerObj]);
-
   const hasHeaderRoutePoints = !!(polPoint || potPoint || podPoint);
 
-  const latestAisPoint = useMemo(() => {
-    // Current cargo marker hanya boleh tampil kalau API mengirim ais_current valid.
-    // Jangan fallback ke AIS history, karena history bukan posisi cargo current.
-    return aisCurrentPoint || null;
-  }, [aisCurrentPoint]);
+  const aisLegs = useMemo(() => getAisLegs(data), [data]);
+
+  const headerPoints = useMemo(
+    () => ({ headerObj, polPoint, potPoint, podPoint }),
+    [headerObj, polPoint, potPoint, podPoint]
+  );
+
+  const activeAisLeg = useMemo(() => {
+    return pickDisplayLeg(aisLegs);
+  }, [aisLegs]);
+
+  const rootCargoPoint = useMemo(() => normalizePoint(data?.cargo_current), [data]);
+
+  const aisCurrentData = useMemo(() => {
+    const legCargo = getLegCargoCurrentData(activeAisLeg);
+    if (legCargo) return legCargo;
+
+    const activeCurrent = getLegAisCurrentData(activeAisLeg);
+    if (activeCurrent) return activeCurrent;
+
+    if (data?.cargo_current && rootCargoPoint) return data.cargo_current;
+
+    const rootPoint = getAisCurrentPoint(data);
+    if (rootPoint && data?.ais_current && !Array.isArray(data.ais_current)) {
+      return data.ais_current;
+    }
+
+    return null;
+  }, [data, activeAisLeg, rootCargoPoint]);
+
+  const aisCurrentPoint = useMemo(() => {
+    if (activeAisLeg) {
+      const legPoint = getLegCargoCurrentPoint(activeAisLeg);
+      if (legPoint) return legPoint;
+    }
+
+    if (rootCargoPoint) return rootCargoPoint;
+
+    if (!aisCurrentData) return null;
+    return normalizePoint(aisCurrentData) || getAisCurrentPoint({ ais_current: aisCurrentData });
+  }, [activeAisLeg, rootCargoPoint, aisCurrentData]);
+
+  const aisDisplaySegments = useMemo(() => {
+    if (aisLegs.length > 0) {
+      return aisLegs
+        .map((leg) => {
+          const path = buildLegActualPath(leg, headerPoints);
+          return { leg, path };
+        })
+        .filter((seg) => seg.path.length > 1);
+    }
+
+    // Fallback response lama yang belum punya ais_legs.
+    const rootHistoryPath = removeDuplicatePoints(getAisHistoryPoints(data));
+    const rootCurrentPoint = rootCargoPoint || getAisCurrentPoint(data);
+    const rootPath = [];
+
+    if (polPoint) rootPath.push(polPoint);
+    if (potPoint) rootPath.push(potPoint);
+
+    if (rootHistoryPath.length > 0) {
+      rootPath.push(...rootHistoryPath);
+    }
+
+    if (rootCurrentPoint) rootPath.push(rootCurrentPoint);
+
+    const cleanRootPath = removeDuplicatePoints(rootPath);
+    return cleanRootPath.length > 1 ? [{ leg: null, path: cleanRootPath }] : [];
+  }, [data, aisLegs, headerPoints, polPoint, potPoint, rootCargoPoint]);
+
+  const activeLegSegment = useMemo(() => {
+    if (!activeAisLeg) return null;
+    return aisDisplaySegments.find((seg) => seg.leg === activeAisLeg) || null;
+  }, [activeAisLeg, aisDisplaySegments]);
+
+  const aisDisplayPath = useMemo(() => {
+    return aisDisplaySegments.flatMap((seg) => seg.path);
+  }, [aisDisplaySegments]);
+
+  const aisHistoryPath = useMemo(() => {
+    if (activeLegSegment?.path?.length > 1) return activeLegSegment.path;
+
+    if (activeAisLeg) {
+      const path = buildLegActualPath(activeAisLeg, headerPoints);
+      if (path.length > 1) return path;
+    }
+
+    if (aisDisplaySegments.length > 0) {
+      return aisDisplaySegments[aisDisplaySegments.length - 1].path;
+    }
+
+    return getAisHistoryPoints(data);
+  }, [data, activeAisLeg, activeLegSegment, aisDisplaySegments, headerPoints]);
+
+  const hasAisHistory = aisDisplaySegments.length > 0;
+
+  const cargoMarkerPoint = useMemo(() => {
+    if (aisCurrentPoint) return aisCurrentPoint;
+
+    if (activeLegSegment?.path?.length) {
+      return activeLegSegment.path[activeLegSegment.path.length - 1];
+    }
+
+    if (aisDisplaySegments.length > 0) {
+      const lastSegment = aisDisplaySegments[aisDisplaySegments.length - 1]?.path || [];
+      return lastSegment.length ? lastSegment[lastSegment.length - 1] : null;
+    }
+
+    return null;
+  }, [aisCurrentPoint, activeLegSegment, aisDisplaySegments]);
+
+  const cargoMarkerSource = useMemo(() => {
+    if (activeAisLeg) return getLegCargoCurrentSource(activeAisLeg);
+    if (data?.cargo_current_source) return data.cargo_current_source;
+    return cargoMarkerPoint ? "history_last_point" : "none";
+  }, [activeAisLeg, data, cargoMarkerPoint]);
+
+  const cargoMarkerIsLive = cargoMarkerSource === "jarvis_current";
+  const hasAisCurrent = !!cargoMarkerPoint;
 
   const fallbackMapPath = useMemo(() => {
     if (!data) return [];
@@ -771,68 +1189,55 @@ function GocometTracking({ defaultSiNumber = "" }) {
       .filter(Boolean);
   }, [data, coords]);
 
-  // --- KODE BARU: PAKSA JALUR POL -> POT -> POD ---
   const fallbackRouteLine = useMemo(() => {
     const pts = [];
     if (polPoint) pts.push(polPoint);
     if (potPoint) pts.push(potPoint);
     if (podPoint) pts.push(podPoint);
-    
-    return pts.length > 1 ? pts : fallbackMapPath;
+
+    return pts.length > 1 ? removeDuplicatePoints(pts) : fallbackMapPath;
   }, [polPoint, potPoint, podPoint, fallbackMapPath]);
-  // ------------------------------------------------
 
-  const hasAisHistory = aisHistoryPath.length > 1;
-  const hasAisCurrent = !!aisCurrentPoint;
+  const activeLegEndPoint = useMemo(() => {
+    return getLegEndPoint(activeAisLeg, headerPoints) || podPoint || null;
+  }, [activeAisLeg, headerPoints, podPoint]);
 
-   const expectedPath = useMemo(() => {
-    // Expected/ETA path dari posisi kapal hanya dibuat jika ais_current valid.
-    if (!aisCurrentPoint) return [];
+  const expectedPath = useMemo(() => {
+    // Garis putus-putus hanya dari posisi cargo terakhir ke destination leg aktif.
+    // Tidak boleh balik ke POL/POT kalau cargo sudah berada di leg berjalan.
+    if (!cargoMarkerPoint || !activeLegEndPoint) return [];
 
-    const pts = [aisCurrentPoint];
-    if (potPoint) pts.push(potPoint);
-    if (podPoint) pts.push(podPoint);
-    return pts.length > 1 ? pts : [];
-  }, [aisCurrentPoint, potPoint, podPoint]);
+    const d = distanceKm(cargoMarkerPoint, activeLegEndPoint);
+    if (d < 30) return [];
 
-const aisDisplayPath = useMemo(() => {
-  if (!hasAisHistory) return [];
-
-  const basePath = [];
-
-  // Visual route selalu dimulai dari POL.
-  if (polPoint) basePath.push(polPoint);
-
-  // AIS history sudah disort dari lama -> baru di getAisHistoryPoints().
-  basePath.push(...aisHistoryPath);
-
-  const cleanPath = removeDuplicatePoints(basePath);
-
-  // Batasi route agar tidak melewati POD.
-  // Jika titik history tidak pernah mendekati POD, route tidak dipotong.
-  return truncatePathAtDestination(cleanPath, podPoint, 120);
-}, [hasAisHistory, polPoint, podPoint, aisHistoryPath]);
+    return removeDuplicatePoints([cargoMarkerPoint, activeLegEndPoint]);
+  }, [cargoMarkerPoint, activeLegEndPoint]);
 
   const mapMode = hasAisHistory
     ? "ais_history"
     : hasAisCurrent
     ? "ais_current"
-    : fallbackMapPath.length > 0
+    : fallbackMapPath.length > 0 || fallbackRouteLine.length > 0
     ? "fallback"
     : "empty";
 
   const mapCenter = useMemo(() => {
-    if (hasAisCurrent) return aisCurrentPoint;
-    if (hasAisHistory) return aisHistoryPath[aisHistoryPath.length - 1];
+    if (cargoMarkerPoint) return cargoMarkerPoint;
+    if (fallbackRouteLine.length > 0) return fallbackRouteLine[0];
     if (fallbackMapPath.length > 0) return fallbackMapPath[0];
     return [15, 95];
-  }, [hasAisCurrent, aisCurrentPoint, hasAisHistory, aisHistoryPath, fallbackMapPath]);
+  }, [cargoMarkerPoint, fallbackRouteLine, fallbackMapPath]);
 
   const mapBounds = useMemo(() => {
     const pts = [];
 
-    if (hasAisHistory) pts.push(...aisDisplayPath);
-    if (hasAisCurrent) pts.push(aisCurrentPoint);
+    if (hasAisHistory) {
+      aisDisplaySegments.forEach((seg) => pts.push(...seg.path));
+    }
+
+    if (cargoMarkerPoint) pts.push(cargoMarkerPoint);
+    if (expectedPath.length > 0) pts.push(...expectedPath);
+    if (!hasAisHistory && !hasAisCurrent) pts.push(...fallbackRouteLine);
     if (!hasAisHistory && !hasAisCurrent) pts.push(...fallbackMapPath);
 
     if (polPoint) pts.push(polPoint);
@@ -842,14 +1247,31 @@ const aisDisplayPath = useMemo(() => {
     return pts.filter(Boolean);
   }, [
     hasAisHistory,
-    aisDisplayPath,
+    aisDisplaySegments,
     hasAisCurrent,
-    aisCurrentPoint,
+    cargoMarkerPoint,
+    expectedPath,
+    fallbackRouteLine,
     fallbackMapPath,
     podPoint,
     potPoint,
     polPoint,
   ]);
+
+  const currentVesselName = useMemo(
+    () => getAisDisplayVessel(data, activeAisLeg),
+    [data, activeAisLeg]
+  );
+
+  const currentVesselSpeed = useMemo(
+    () => getAisDisplaySpeed(data, activeAisLeg),
+    [data, activeAisLeg]
+  );
+
+  const currentVesselUpdated = useMemo(
+    () => getAisDisplayUpdated(data, activeAisLeg),
+    [data, activeAisLeg]
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -1113,37 +1535,31 @@ const aisDisplayPath = useMemo(() => {
 
                       {mapMode === "ais_history" && (
                         <>
-                          <Polyline
-                            positions={aisDisplayPath}
-                            color="#2563eb"
-                            weight={4}
-                            opacity={0.95}
-                          />
+                          {aisDisplaySegments.map((seg, idx) => (
+                            <Polyline
+                              key={`ais-segment-${idx}`}
+                              positions={seg.path}
+                              color="#2563eb"
+                              weight={4}
+                              opacity={0.95}
+                            />
+                          ))}
 
-                          {aisHistoryPath.length > 0 && (
-                            <Marker position={aisHistoryPath[0]} icon={startTrackIcon}>
+                          {cargoMarkerPoint && (
+                            <Marker position={cargoMarkerPoint} icon={currentCargoIcon}>
                               <Popup>
                                 <div>
-                                  <strong>Start AIS Track</strong>
+                                  <strong>
+                                    {cargoMarkerIsLive
+                                      ? "Current Cargo Position"
+                                      : "Last Known Cargo Position"}
+                                  </strong>
                                   <br />
-                                  Vessel: {data?.ais_current?.current_vessel || "-"}
-                                </div>
-                              </Popup>
-                            </Marker>
-                          )}
-
-                          {aisCurrentPoint && (
-                            <Marker position={aisCurrentPoint} icon={currentCargoIcon}>
-                              <Popup>
-                                <div>
-                                  <strong>Current Cargo Position</strong>
+                                  Vessel: {currentVesselName}
                                   <br />
-                                  Vessel: {data?.ais_current?.current_vessel || "-"}
+                                  {cargoMarkerIsLive ? "Speed" : "Last AIS speed"}: {currentVesselSpeed}
                                   <br />
-                                  Speed: {data?.ais_current?.speed || "-"}
-                                  <br />
-                                  Updated:{" "}
-                                  {formatDisplayDate(data?.ais_current?.last_updated)}
+                                  Updated: {formatDisplayDate(currentVesselUpdated)}
                                 </div>
                               </Popup>
                             </Marker>
@@ -1156,6 +1572,18 @@ const aisDisplayPath = useMemo(() => {
                                   <strong>POL</strong>
                                   <br />
                                   {headerObj?.pol || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {potPoint && (
+                            <Marker position={potPoint} icon={potIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Transhipment Port</strong>
+                                  <br />
+                                  {headerObj?.pot || "-"}
                                 </div>
                               </Popup>
                             </Marker>
@@ -1173,7 +1601,6 @@ const aisDisplayPath = useMemo(() => {
                             </Marker>
                           )}
 
-                          {/* Expected / ETA path */}
                           {expectedPath.length > 1 && (
                             <Polyline
                               positions={expectedPath}
@@ -1188,18 +1615,21 @@ const aisDisplayPath = useMemo(() => {
 
                       {mapMode === "ais_current" && (
                         <>
-                          {aisCurrentPoint && (
-                            <Marker position={aisCurrentPoint} icon={currentCargoIcon}>
+                          {cargoMarkerPoint && (
+                            <Marker position={cargoMarkerPoint} icon={currentCargoIcon}>
                               <Popup>
                                 <div>
-                                  <strong>Current Cargo Position</strong>
+                                  <strong>
+                                    {cargoMarkerIsLive
+                                      ? "Current Cargo Position"
+                                      : "Last Known Cargo Position"}
+                                  </strong>
                                   <br />
-                                  Vessel: {data?.ais_current?.current_vessel || "-"}
+                                  Vessel: {currentVesselName}
                                   <br />
-                                  Speed: {data?.ais_current?.speed || "-"}
+                                  {cargoMarkerIsLive ? "Speed" : "Last AIS speed"}: {currentVesselSpeed}
                                   <br />
-                                  Updated:{" "}
-                                  {formatDisplayDate(data?.ais_current?.last_updated)}
+                                  Updated: {formatDisplayDate(currentVesselUpdated)}
                                 </div>
                               </Popup>
                             </Marker>
@@ -1212,6 +1642,18 @@ const aisDisplayPath = useMemo(() => {
                                   <strong>POL</strong>
                                   <br />
                                   {headerObj?.pol || "-"}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          )}
+
+                          {potPoint && (
+                            <Marker position={potPoint} icon={potIcon}>
+                              <Popup>
+                                <div>
+                                  <strong>Transhipment Port</strong>
+                                  <br />
+                                  {headerObj?.pot || "-"}
                                 </div>
                               </Popup>
                             </Marker>
@@ -1297,17 +1739,20 @@ const aisDisplayPath = useMemo(() => {
                             </Marker>
                           )}
 
-                          {/* Tidak render current cargo di fallback jika ais_current kosong. */}
-                          {aisCurrentPoint && (
-                            <Marker position={aisCurrentPoint} icon={currentCargoIcon}>
+                          {cargoMarkerPoint && (
+                            <Marker position={cargoMarkerPoint} icon={currentCargoIcon}>
                               <Popup>
-                                <strong>Current Cargo Position</strong>
+                                <strong>
+                                  {cargoMarkerIsLive
+                                    ? "Current Cargo Position"
+                                    : "Last Known Cargo Position"}
+                                </strong>
                                 <br />
-                                Vessel: {data?.ais_current?.current_vessel || "-"}
+                                Vessel: {currentVesselName}
                                 <br />
-                                Speed: {data?.ais_current?.speed || "-"}
+                                {cargoMarkerIsLive ? "Speed" : "Last AIS speed"}: {currentVesselSpeed}
                                 <br />
-                                Updated: {formatDisplayDate(data?.ais_current?.last_updated)}
+                                Updated: {formatDisplayDate(currentVesselUpdated)}
                               </Popup>
                             </Marker>
                           )}
@@ -1322,7 +1767,7 @@ const aisDisplayPath = useMemo(() => {
                       </div>
                       <div className="tracking-legend-item">
                         <span className="dot blue"></span>
-                        <span>Origin</span>
+                        <span>Start AIS / Origin</span>
                       </div>
                       <div className="tracking-legend-item">
                         <span className="dot yellow"></span>
