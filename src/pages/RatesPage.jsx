@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   Anchor,
   Boxes,
@@ -14,7 +14,6 @@ import {
   Search,
   Ship,
   Plane,
-  X,
 } from "lucide-react";
 
 import GclLayout from "../layouts/GclLayout";
@@ -34,36 +33,51 @@ function clean(v, fallback = "-") {
   return s;
 }
 
+function isValidPrice(p) {
+  return p !== null && p !== undefined && p !== "";
+}
+
+// FUNGSI PERKALIAN (MARKUP 20%)
 function calcLcl(v) {
   if (v === null || v === undefined || v === "") return null;
-  let n = Number(v);
-  if (isNaN(n)) return null;
-
-  if (n < 0) return "FREE";
-  if (n === 0) return 2;    
-  return n * 1.2;           
+  
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  
+  // Jika harganya 0, tetapkan 0 (nanti dibaca 'FREE' oleh fungsi money)
+  if (n === 0) return 0;
+  
+  // Jika minus (Rebate), tidak perlu markup
+  if (n < 0) return 0;
+  
+  // Harga normal kalikan markup system
+  return n * 1.2;
 }
 
 function calcFcl(v) {
   if (v === null || v === undefined || v === "") return null;
-  let n = Number(v);
-  if (isNaN(n) || n <= 0) return null; 
-  return n * 1.2;                      
+  
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  
+  return n * 1.2;
 }
 
 function calcAir(v) {
   if (v === null || v === undefined || v === "") return null;
-  let n = Number(v);
-  if (isNaN(n) || n <= 0) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
   return n * 1.2;
 }
 
 function money(v, isIDR = false) {
-  if (v === "FREE") return "FREE";
-  if (v === null || v === undefined || v === "") return "-";
+  if (v === "FREE" || v === 0 || v === "0") return "FREE";
+  if (!isValidPrice(v)) return "-";
   
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return "-"; 
+  if (!Number.isFinite(n)) return "-"; 
+
+  if (n < 0) return `Rebate ($ ${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
 
   if (isIDR) {
     return `IDR ${n.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -109,6 +123,7 @@ function cargoTone(type) {
   if (t === "DG" || t === "DANGEROUS GOODS") return "bg-rose-500/15 text-rose-300 border-rose-400/30";
   if (t === "REEFER") return "bg-cyan-500/15 text-cyan-300 border-cyan-400/30";
   if (t === "BREAKBULK") return "bg-amber-500/15 text-amber-300 border-amber-400/30";
+  if (t === "PERISHABLE") return "bg-teal-500/15 text-teal-300 border-teal-400/30";
   return "bg-emerald-500/15 text-emerald-300 border-emerald-400/30";
 }
 
@@ -131,7 +146,6 @@ function SummaryCard({ icon: Icon, label, value, hint, tone = "cyan" }) {
     emerald: "border-emerald-300/20 bg-emerald-300/10 text-emerald-200",
     amber: "border-amber-300/20 bg-amber-300/10 text-amber-200",
     violet: "border-violet-300/20 bg-violet-300/10 text-violet-200",
-    rose: "border-rose-300/20 bg-rose-300/10 text-rose-200",
   };
 
   return (
@@ -185,41 +199,6 @@ function SearchInput({ value, onChange }) {
   );
 }
 
-function LclPreview({ rate }) {
-  const options = rate.lcl_options || [];
-  
-  if (options.length === 0) {
-    return <span className="text-slate-600">-</span>;
-  }
-
-  let displayOptions = options.filter(o => Number(o.is_priority) === 1);
-  if (displayOptions.length === 0) displayOptions = [options[0]];
-
-  return (
-    <div className="flex flex-col items-end gap-3 leading-tight text-right">
-      {displayOptions.map((opt, idx) => {
-        const isPriority = Number(opt.is_priority) === 1;
-        return (
-          <div key={idx} className="flex flex-col items-end border-b border-white/5 pb-2 last:border-0 last:pb-0">
-            {isPriority && (
-              <span className="mb-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400">PRIORITY</span>
-            )}
-            <div className={clsx("font-bold", opt.price === "FREE" ? "text-amber-300" : "text-cyan-300")}>
-              {opt.price === "FREE" ? "FREE" : money(opt.price)}
-            </div>
-            {opt.type_name && <div className="mt-1 text-[11px] text-slate-500">{opt.type_name}</div>}
-            {opt.transit_time && (
-              <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-                <Clock className="h-3 w-3" /> {opt.transit_time}
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  );
-}
-
 function TabButton({ active, onClick, icon: Icon, children }) {
   return (
     <button
@@ -235,6 +214,48 @@ function TabButton({ active, onClick, icon: Icon, children }) {
       <Icon className="h-4 w-4" />
       {children}
     </button>
+  );
+}
+
+function LclPreview({ rate }) {
+  const options = rate.lcl_options || [];
+  
+  if (options.length === 0) {
+    return <span className="text-slate-600">-</span>;
+  }
+
+  let displayOptions = options.filter(o => Number(o.is_priority) === 1 && isValidPrice(o.price));
+  if (displayOptions.length === 0) {
+    const validOpts = options.filter(o => isValidPrice(o.price));
+    if (validOpts.length > 0) displayOptions = [validOpts[0]];
+  }
+
+  if (displayOptions.length === 0) return <span className="text-slate-600">-</span>;
+
+  return (
+    <div className="flex flex-col items-end gap-3 leading-tight text-right">
+      {displayOptions.map((opt, idx) => {
+        const isPriority = Number(opt.is_priority) === 1;
+        const processedPrice = opt.price; // Sudah dikalkulasi di loadPricing
+        
+        return (
+          <div key={idx} className="flex flex-col items-end border-b border-white/5 pb-2 last:border-0 last:pb-0">
+            {isPriority && (
+              <span className="mb-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400">PRIORITY</span>
+            )}
+            <div className={clsx("font-bold", processedPrice === 0 || processedPrice === "FREE" ? "text-amber-300" : "text-cyan-300")}>
+              {money(processedPrice)}
+            </div>
+            {opt.type_name && <div className="mt-1 text-[11px] text-slate-500">{opt.type_name}</div>}
+            {opt.transit_time && (
+              <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+                <Clock className="h-3 w-3" /> {opt.transit_time}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
   );
 }
 
@@ -254,64 +275,55 @@ function InfoBox({ title, content, tone }) {
 }
 
 // ==============================================================================
-// 3. SEA RATES DETAIL MODAL 
+// 3. STRICT SEPARATED MODAL DETAIL
 // ==============================================================================
 
-function PricingDetailModal({ open, onClose, loading, error, detail }) {
-  const [activeTab, setActiveTab] = useState("fcl");
-
-  useEffect(() => {
-    if (open) setActiveTab("fcl");
-  }, [open]);
-
+function PricingDetailModal({ open, onClose, loading, error, detail, rateType }) {
   const header = detail?.header || {};
   const fclDataRaw = detail?.fcl_data || detail?.data || {};
   const lclDataRaw = detail?.lcl_data || {};
 
-  const fclGroups = Object.entries(fclDataRaw).map(([groupName, rows]) => [
-    groupName,
-    (Array.isArray(rows) ? rows : []).map(item => ({
-      ...item,
-      name: item.component_name || item.name,
-      unit: item.unit_basis || "Per Container",
-      "20": calcFcl(item.price_20 || item["20"]),
-      "40": calcFcl(item.price_40 || item["40"]),
-      "40hc": calcFcl(item.price_40hc || item["40hc"])
-    }))
-  ]);
+  const fclGroups = useMemo(() => {
+    return Object.entries(fclDataRaw).map(([groupName, rows]) => [
+      groupName,
+      (Array.isArray(rows) ? rows : []).map((item) => ({
+        ...item,
+        name: item.component_name || item.name,
+        unit: item.unit_basis || "Per Container",
+        "20": calcFcl(item.price_20 || item["20"]),
+        "40": calcFcl(item.price_40 || item["40"]),
+        "40hc": calcFcl(item.price_40hc || item["40hc"])
+      }))
+    ]);
+  }, [fclDataRaw]);
 
-  const lclGroups = Object.entries(lclDataRaw).map(([groupName, rows]) => [
-    groupName,
-    (Array.isArray(rows) ? rows : []).map(item => ({
-      ...item,
-      name: item.service_name || item.name, // Mapping dari service_name
-      unit: item.unit_basis || "Per CBM",
-      price: calcLcl(item.price_wm || item.price) // Mapping dari price_wm
-    }))
-  ]);
+  const lclGroups = useMemo(() => {
+    return Object.entries(lclDataRaw).map(([groupName, rows]) => [
+      groupName,
+      (Array.isArray(rows) ? rows : []).map((item) => ({
+        ...item,
+        name: item.service_name || item.name,
+        unit: item.unit_basis || "Per CBM",
+        price: calcLcl(item.price_wm || item.price)
+      }))
+    ]);
+  }, [lclDataRaw]);
 
-  // =========================================================
-  // LOGIKA DOUBLE-CHECK LCL ROUTES (BULLETPROOF API BACKUP)
-  // =========================================================
   const lclRoutesAPI = Array.isArray(detail?.lcl_routes) ? detail.lcl_routes : (Array.isArray(detail?.lcl) ? detail.lcl : []);
-  const lclRoutesBackup = detail?.list_lcl_options || []; // Data murni dari halaman utama (List)
+  const lclRoutesBackup = detail?.list_lcl_options || []; 
 
-  let modalPriority = lclRoutesAPI.filter(rt => rt.price !== null && rt.price !== "" && Number(rt.is_priority) === 1);
-  let listPriority = lclRoutesBackup.filter(rt => rt.raw_price !== null && rt.raw_price !== undefined && Number(rt.is_priority) === 1);
+  let modalPriority = lclRoutesAPI.filter(rt => isValidPrice(rt.price) && Number(rt.is_priority) === 1);
+  let listPriority = lclRoutesBackup.filter(rt => isValidPrice(rt.raw_price) && Number(rt.is_priority) === 1);
 
   let priorityLclRoutes = [];
-  
-  // Jika API Detail mengirim lebih sedikit data prioritas dibanding API List, 
-  // Kita ambil paksa data dari API List karena itu yang paling update.
   if (listPriority.length > modalPriority.length) {
     priorityLclRoutes = listPriority.map(rt => ({ ...rt, price: rt.raw_price })); 
   } else {
     priorityLclRoutes = modalPriority;
   }
 
-  // Fallback ke Direct Consol jika sama sekali tidak ada yang dicentang priority
   if (priorityLclRoutes.length === 0) {
-    const fallbackRoute = lclRoutesAPI.find(rt => rt.price !== null && rt.price !== "" && rt.type_name === "Direct Consol");
+    const fallbackRoute = lclRoutesAPI.find(rt => isValidPrice(rt.price) && rt.type_name === "Direct Consol");
     if (fallbackRoute) priorityLclRoutes = [fallbackRoute];
   }
 
@@ -334,6 +346,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={onClose} />
       <div className="relative flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[34px] border border-white/10 bg-slate-900 shadow-2xl shadow-black/50">
         
+        {/* Header Modal - Menampilkan Badge Spesifik */}
         <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-white/[0.04] px-6 py-5">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
@@ -343,9 +356,14 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
               <h2 className="text-xl font-black uppercase tracking-wide text-white">{clean(header.liner_name, "Pricing Detail")}</h2>
               <p className="mt-1 text-sm text-slate-400">{detail?.routeName || `Freight rate ID #${header.id || "-"}`}</p>
             </div>
-            <span className={clsx("rounded-full border px-3 py-1 text-xs font-bold", cargoTone(header.cargo_type))}>
-              {clean(header.cargo_type, "GENCO")}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={clsx("rounded-full border px-3 py-1 text-xs font-bold", cargoTone(header.cargo_type))}>
+                {clean(header.cargo_type, "GENCO")}
+              </span>
+              <span className={clsx("rounded-full border px-3 py-1 text-xs font-bold", rateType === "lcl" ? "bg-amber-500/20 text-amber-300 border-amber-400/30" : "bg-cyan-500/20 text-cyan-300 border-cyan-400/30")}>
+                {rateType === "lcl" ? "LCL RATES" : "FCL RATES"}
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -357,35 +375,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
           </button>
         </div>
 
-        <div className="flex border-b border-white/10 bg-slate-900/50 p-6 justify-center">
-          <div className="inline-flex gap-4 rounded-full bg-slate-950/70 p-2 border border-white/10 shadow-lg backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => setActiveTab("fcl")}
-              className={clsx(
-                "flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-300 transform hover:scale-105",
-                activeTab === "fcl"
-                  ? "bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.5)]"
-                  : "text-slate-400 hover:text-white hover:bg-white/10"
-              )}
-            >
-              <Ship className="h-5 w-5" /> FCL Rates
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("lcl")}
-              className={clsx(
-                "flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-300 transform hover:scale-105",
-                activeTab === "lcl"
-                  ? "bg-amber-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.5)]"
-                  : "text-slate-400 hover:text-white hover:bg-white/10"
-              )}
-            >
-              <Boxes className="h-5 w-5" /> LCL Rates
-            </button>
-          </div>
-        </div>
-
+        {/* Body Modal (Tanpa Tab Switcher Internal) */}
         <div className="overflow-y-auto p-6">
           {loading ? (
             <div className="grid gap-4">
@@ -396,8 +386,28 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
             <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-6 text-rose-200">{error}</div>
           ) : (
             <>
-              {activeTab === "fcl" && (
+              {/* STRICT FCL PANE */}
+              {rateType === "fcl" && (
                 <div className="space-y-6 animate-fadeIn">
+                  <div className="mb-6 grid gap-4 md:grid-cols-4">
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">FCL Validity</p>
+                      <p className="mt-2 font-semibold text-white">{formatValidityRange(header.fcl_validity_from, header.fcl_validity_to || header.validity_period)}</p>
+                    </div>
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Free Time</p>
+                      <p className="mt-2 font-semibold text-white">{clean(header.fcl_free_time || header.free_time)}</p>
+                    </div>
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Transit Time</p>
+                      <p className="mt-2 font-semibold text-white">{clean(header.fcl_transit_time)}</p>
+                    </div>
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Remarks</p>
+                      <p className="mt-2 font-semibold text-white">{clean(header.fcl_remarks || header.inland_moda)}</p>
+                    </div>
+                  </div>
+
                   <div className="overflow-x-auto rounded-3xl border border-white/10">
                     <table className="w-full min-w-[850px] border-collapse text-sm">
                       <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
@@ -423,7 +433,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
                               {rows.map((item, idx) => (
                                 <tr key={`${groupName}-${idx}`} className="border-t border-white/10 bg-white/[0.02] hover:bg-white/[0.05]">
                                   <td className="px-4 py-4 font-medium text-white">{clean(item.name)}</td>
-                                  <td className="px-4 py-4 text-center text-slate-400 text-[12px]">{clean(item.unit)}</td>
+                                  <td className="px-4 py-4 text-center text-[12px] text-slate-400">{clean(item.unit)}</td>
                                   <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["20"])}</td>
                                   <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["40"])}</td>
                                   <td className="px-4 py-4 text-right font-mono text-slate-200">{money(item["40hc"])}</td>
@@ -445,15 +455,21 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
                   <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                     <InfoBox title="Include of Rate" tone="emerald" content={header.fcl_include_rate || header.include_rate} />
                     <InfoBox title="Exclude of Rate" tone="rose" content={header.fcl_exclude_rate || header.exclude_rate} />
-                    <InfoBox title="Remarks" tone="amber" content={header.fcl_remarks || header.inland_moda} />
-                    <InfoBox title="Free Time (D&D)" tone="cyan" content={header.fcl_free_time || header.free_time} />
                   </div>
                 </div>
               )}
 
-              {activeTab === "lcl" && (
+              {/* STRICT LCL PANE */}
+              {rateType === "lcl" && (
                 <div className="space-y-6 animate-fadeIn">
                   
+                  <div className="mb-6 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-amber-500">LCL Validity</p>
+                      <p className="mt-2 font-semibold text-white">{formatValidityRange(header.lcl_validity_from, header.lcl_validity_to)}</p>
+                    </div>
+                  </div>
+
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-400 mb-3">
                       {priorityLclRoutes.length > 0 && Number(priorityLclRoutes[0].is_priority) === 1 ? "Priority LCL Routes" : "Primary LCL Route"}
@@ -474,7 +490,7 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
                                   {Number(rt.is_priority) === 1 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />}
                                 </span>
                                 <span className="text-lg font-black text-amber-300 mt-1 block">
-                                  {processedPrice === "FREE" ? "FREE" : money(processedPrice)}
+                                  {money(processedPrice)}
                                 </span>
                               </div>
                               {rt.transit_time && (
@@ -548,11 +564,12 @@ function PricingDetailModal({ open, onClose, loading, error, detail }) {
 // ==============================================================================
 
 export default function PricingPage() {
-  const [tab, setTab] = useState("sea"); 
+  const [tab, setTab] = useState("fcl"); 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  const [seaGroups, setSeaGroups] = useState([]);
+  const [fclGroups, setFclGroups] = useState([]);
+  const [lclGroups, setLclGroups] = useState([]);
   const [airGroups, setAirGroups] = useState([]);
 
   const [search, setSearch] = useState("");
@@ -563,6 +580,7 @@ export default function PricingPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [detail, setDetail] = useState(null);
+  const [modalRateType, setModalRateType] = useState("fcl");
 
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
   const [quoteData, setQuoteData] = useState(null);
@@ -573,30 +591,48 @@ export default function PricingPage() {
       setErr("");
 
       const seaRes = await fetch("https://gateway-cl.com/api/crm/pricing?X-API-KEY=gateway-fms").then(r => r.json());
-      const parsedSea = [];
+      const pFcl = [];
+      const pLcl = [];
+
       Object.entries(seaRes?.data || {}).forEach(([route, rates]) => {
-        parsedSea.push({
-          route,
-          rates: rates.map((r) => {
-            const lcl_options = (r.lcl_options || []).map(opt => ({
-              ...opt,
-              raw_price: opt.price, // SIMPAN HARGA ASLI UNTUK BACKUP DI MODAL
-              price: calcLcl(opt.price)
-            }));
-            
-            return {
-              ...r,
-              lcl_options,
-              prices: {
-                "20": calcFcl(r?.prices?.["20"]),
-                "40": calcFcl(r?.prices?.["40"]),
-                "40HC": calcFcl(r?.prices?.["40HC"] || r?.prices?.["40hc"]),
-              },
-            };
-          }),
+        let fclRates = [];
+        let lclRates = [];
+
+        rates.forEach((r) => {
+          const lcl_options = (r.lcl_options || []).map(opt => ({
+            ...opt,
+            raw_price: opt.price, 
+            price: calcLcl(opt.price)
+          }));
+          
+          const baseRate = {
+            ...r,
+            lcl_options,
+            prices: {
+              "20": calcFcl(r?.prices?.["20"]),
+              "40": calcFcl(r?.prices?.["40"]),
+              "40HC": calcFcl(r?.prices?.["40HC"] || r?.prices?.["40hc"]),
+            },
+          };
+
+          // STRICT FCL CHECK
+          if (baseRate.prices["20"] !== null || baseRate.prices["40"] !== null || baseRate.prices["40HC"] !== null) {
+            fclRates.push(baseRate);
+          }
+
+          // STRICT LCL CHECK
+          const hasLclPrice = lcl_options.some(opt => isValidPrice(opt.raw_price)) || isValidPrice(r.min_lcl_price) || isValidPrice(r.lcl_price);
+          if (hasLclPrice) {
+            lclRates.push(baseRate);
+          }
         });
+
+        if (fclRates.length > 0) pFcl.push({ route, rates: fclRates });
+        if (lclRates.length > 0) pLcl.push({ route, rates: lclRates });
       });
-      setSeaGroups(parsedSea.sort((a, b) => a.route.localeCompare(b.route)));
+
+      setFclGroups(pFcl.sort((a, b) => a.route.localeCompare(b.route)));
+      setLclGroups(pLcl.sort((a, b) => a.route.localeCompare(b.route)));
 
       const airRes = await fetch("https://gateway-cl.com/api/feeder_rate?X-API-KEY=gateway-fms").then(r => r.json());
       const airMap = {};
@@ -627,8 +663,9 @@ export default function PricingPage() {
     loadPricing();
   }, []);
 
-  async function openDetail(rate, routeName) {
+  async function openDetail(rate, routeName, targetTab = "fcl") {
     try {
+      setModalRateType(targetTab);
       setDetailOpen(true);
       setDetailLoading(true);
       setDetailError("");
@@ -658,7 +695,6 @@ export default function PricingPage() {
         throw new Error(json?.message || "Failed to load detail");
       }
 
-      // SUNTIKKAN DATA LIST LCL_OPTIONS SEBAGAI BACKUP KE DALAM DETAIL
       setDetail({ ...json, routeName, list_lcl_options: rate.lcl_options });
     } catch (e) {
       setDetailError(e?.message || "Terjadi kesalahan saat memuat detail");
@@ -672,12 +708,12 @@ export default function PricingPage() {
     setQuoteModalOpen(true);
   }
 
-  const activeGroups = tab === "sea" ? seaGroups : airGroups;
+  const activeGroups = tab === "fcl" ? fclGroups : tab === "lcl" ? lclGroups : airGroups;
 
   const cargoOptions = useMemo(() => {
     const s = new Set();
     activeGroups.forEach((g) => g.rates.forEach((r) => {
-      const type = tab === "sea" ? r.cargo_type : r.commodity;
+      const type = tab === "air" ? r.commodity : r.cargo_type;
       if (type) s.add(type);
     }));
     return Array.from(s).sort();
@@ -688,8 +724,8 @@ export default function PricingPage() {
 
     let rows = activeGroups.map((group) => {
       const rates = group.rates.filter((rate) => {
-        const type = tab === "sea" ? rate.cargo_type : rate.commodity;
-        const liner = tab === "sea" ? rate.liner_name : rate.airline;
+        const type = tab === "air" ? rate.commodity : rate.cargo_type;
+        const liner = tab === "air" ? rate.airline : rate.liner_name;
         const haystack = [group.route, liner, type].join(" ").toLowerCase();
 
         if (q && !haystack.includes(q)) return false;
@@ -712,13 +748,12 @@ export default function PricingPage() {
   const summary = useMemo(() => {
     const visibleRates = filteredGroups.flatMap((g) => g.rates);
     
-    if (tab === "sea") {
-      const liners = new Set(visibleRates.map((r) => r.liner_name).filter(Boolean));
-      const withLcl = visibleRates.filter((r) => (r.lcl_options || []).length > 0).length;
-      return { routes: filteredGroups.length, totalRates: visibleRates.length, liners: liners.size, extraLabel: "LCL Options", extraValue: withLcl };
-    } else {
+    if (tab === "air") {
       const airlines = new Set(visibleRates.map((r) => r.airline).filter(Boolean));
       return { routes: filteredGroups.length, totalRates: visibleRates.length, liners: airlines.size, extraLabel: "Airlines", extraValue: airlines.size };
+    } else {
+      const liners = new Set(visibleRates.map((r) => r.liner_name).filter(Boolean));
+      return { routes: filteredGroups.length, totalRates: visibleRates.length, liners: liners.size };
     }
   }, [filteredGroups, tab]);
 
@@ -741,7 +776,7 @@ export default function PricingPage() {
                   </div>
                   <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-4xl">Rates &amp; Tariff</h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                    Browse public rates for LCL, FCL, and Airfreight (Export).
+                    Browse public rates for FCL, LCL, and Airfreight (Export).
                   </p>
                 </div>
                 <button
@@ -755,13 +790,11 @@ export default function PricingPage() {
                 </button>
               </div>
 
+              {/* TAB BUTTONS: STRICT SEPARATION */}
               <div className="mt-6 flex flex-wrap gap-3">
-                <TabButton active={tab === "sea"} onClick={() => setTab("sea")} icon={Ship}>
-                  Sea Rates (FCL/LCL)
-                </TabButton>
-                <TabButton active={tab === "air"} onClick={() => setTab("air")} icon={Plane}>
-                  Air Rates
-                </TabButton>
+                <TabButton active={tab === "fcl"} onClick={() => setTab("fcl")} icon={Ship}>FCL Rates</TabButton>
+                <TabButton active={tab === "lcl"} onClick={() => setTab("lcl")} icon={Boxes}>LCL Rates</TabButton>
+                <TabButton active={tab === "air"} onClick={() => setTab("air")} icon={Plane}>Air Rates</TabButton>
               </div>
 
               <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.05] p-4 backdrop-blur-xl">
@@ -792,9 +825,9 @@ export default function PricingPage() {
 
               <div className="mt-6 grid gap-4 md:grid-cols-4">
                 <SummaryCard icon={Route} label="Routes" value={summary.routes} hint="Visible route groups" tone="cyan" />
-                <SummaryCard icon={tab === "sea" ? Ship : Plane} label="Rates" value={summary.totalRates} hint="Visible offers" tone="emerald" />
-                <SummaryCard icon={Anchor} label={tab === "sea" ? "Liners" : "Airlines"} value={summary.liners} hint="Unique providers" tone="violet" />
-                <SummaryCard icon={Package} label={summary.extraLabel} value={summary.extraValue} hint="Available" tone="amber" />
+                <SummaryCard icon={tab === "air" ? Plane : Ship} label="Rates" value={summary.totalRates} hint="Visible offers" tone="emerald" />
+                <SummaryCard icon={Anchor} label={tab === "air" ? "Airlines" : "Liners"} value={summary.liners} hint="Unique providers" tone="violet" />
+                <SummaryCard icon={Package} label={summary.extraLabel || "Options"} value={summary.totalRates} hint="Available" tone="amber" />
               </div>
 
               <div className="mt-6 rounded-[32px] border border-white/10 bg-white/[0.05] p-5 shadow-2xl shadow-black/20 backdrop-blur-xl">
@@ -834,7 +867,9 @@ export default function PricingPage() {
                         </div>
 
                         <div className="overflow-x-auto">
-                          {tab === "sea" && (
+                          
+                          {/* FCL TABLE STRICT */}
+                          {tab === "fcl" && (
                             <table className="w-full min-w-[1050px] border-collapse text-sm">
                               <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
                                 <tr>
@@ -845,60 +880,44 @@ export default function PricingPage() {
                                   <th className="px-4 py-4 text-right">20' All-In</th>
                                   <th className="px-4 py-4 text-right">40' All-In</th>
                                   <th className="px-4 py-4 text-right">40'HC All-In</th>
-                                  <th className="px-4 py-4 text-right">LCL / CBM</th>
                                   <th className="px-4 py-4 text-right">Action</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {group.rates.map((rate, idx) => (
                                   <tr key={rate.id || idx} className="border-b border-slate-800/50 hover:bg-white/[0.02] transition-colors text-[13px]">
-                                    
                                     <td className="px-4 py-3 font-semibold text-white align-middle whitespace-nowrap">
                                       {clean(rate.liner_name)}
                                     </td>
-
                                     <td className="px-4 py-3 align-middle">
-                                      {(() => {
-                                        const ctype = rate.cargo_type || "GENCO";
-                                        return (
-                                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${cargoTone(ctype)} uppercase shadow-sm whitespace-nowrap`}>
-                                            {ctype}
-                                          </span>
-                                        );
-                                      })()}
+                                      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${cargoTone(rate.cargo_type || "GENCO")} uppercase shadow-sm whitespace-nowrap`}>
+                                        {rate.cargo_type || "GENCO"}
+                                      </span>
                                     </td>
-
                                     <td className="px-4 py-3 align-middle text-left whitespace-nowrap">
                                       <span className="text-slate-200 inline-flex items-center text-[12px]">
                                         <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-cyan-400" />
-                                        {formatValidityRange(rate.fcl_validity_from, rate.validity_period)}
+                                        {formatValidityRange(rate.fcl_validity_from, rate.fcl_validity_to)}
                                       </span>
                                     </td>
-
                                     <td className="px-4 py-3 align-middle text-left whitespace-nowrap">
                                       <span className="text-slate-400 font-normal text-[12px] inline-flex items-center">
                                         <Clock className="mr-1.5 h-3.5 w-3.5 text-slate-500" />
                                         {rate.fcl_transit_time || "-"}
                                       </span>
                                     </td>
-
                                     <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
-                                      {rate.prices?.["20"] > 0 ? `$${Number(rate.prices["20"]).toFixed(2)}` : "-"}
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
-                                      {rate.prices?.["40"] > 0 ? `$${Number(rate.prices["40"]).toFixed(2)}` : "-"}
+                                      {money(rate.prices?.["20"])}
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
-                                      {rate.prices?.["40HC"] > 0 ? `$${Number(rate.prices["40HC"]).toFixed(2)}` : "-"}
+                                      {money(rate.prices?.["40"])}
                                     </td>
-
-                                    <td className="px-4 py-3 text-right align-middle font-semibold text-cyan-400 whitespace-nowrap">
-                                      <LclPreview rate={rate} />
+                                    <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-400 align-middle">
+                                      {money(rate.prices?.["40HC"])}
                                     </td>
-
                                     <td className="px-4 py-3 text-right align-middle">
                                       <button
-                                        onClick={() => openDetail(rate, group.route)}
+                                        onClick={() => openDetail(rate, group.route, "fcl")}
                                         className="inline-flex h-8 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-3 text-xs font-bold text-cyan-400 transition hover:bg-cyan-500 hover:text-slate-950"
                                       >
                                         Detail
@@ -910,6 +929,124 @@ export default function PricingPage() {
                             </table>
                           )}
 
+                          {/* LCL TABLE STRICT */}
+                          {tab === "lcl" && (
+                            <table className="w-full min-w-[1050px] border-collapse text-sm">
+                              <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
+                                <tr>
+                                  <th className="px-4 py-4 text-left">Liner</th>
+                                  <th className="px-4 py-4 text-left">Type</th>
+                                  <th className="px-4 py-4 text-left">Validity</th>
+                                  <th className="px-4 py-4 text-left">Route</th>
+                                  <th className="px-4 py-4 text-right">Price / CBM</th>
+                                  <th className="px-4 py-4 text-left pl-6">Transit Time</th>
+                                  <th className="px-4 py-4 text-right">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.rates.flatMap((rate) => {
+                                  const options = rate.lcl_options || [];
+                                  
+                                  // Helper untuk memastikan harga tidak kosong
+                                  const hasPrice = (p) => p !== null && p !== undefined && p !== "";
+                                  
+                                  // Ambil rute prioritas yang memiliki harga
+                                  let displayOptions = options.filter(o => Number(o.is_priority) === 1 && hasPrice(o.raw_price ?? o.price));
+                                  
+                                  // Jika tidak ada prioritas, ambil satu rute valid pertama sebagai fallback
+                                  if (displayOptions.length === 0) {
+                                    const validOpts = options.filter(o => hasPrice(o.raw_price ?? o.price));
+                                    if (validOpts.length > 0) displayOptions = [validOpts[0]];
+                                  }
+
+                                  // Fallback terakhir untuk mengantisipasi data yang masih memakai struktur db lama
+                                  if (displayOptions.length === 0) {
+                                    if (hasPrice(rate.min_lcl_price) || hasPrice(rate.lcl_price)) {
+                                      const fallbackPrice = rate.lcl_price ?? rate.min_lcl_price;
+                                      displayOptions = [{
+                                        price: calcLcl(fallbackPrice),
+                                        type_name: rate.lcl_type_name ?? rate.min_lcl_type_name ?? "-",
+                                        transit_time: rate.lcl_transit_time ?? "-",
+                                        is_priority: 0
+                                      }];
+                                    } else {
+                                      return []; // Buang row jika benar-benar kosong harganya
+                                    }
+                                  }
+
+                                  // Render baris sebanyak jumlah opsi rute yang ditampilkan
+                                  return displayOptions.map((opt, idx) => {
+                                    const processedPrice = opt.price; 
+                                    const isPriority = Number(opt.is_priority) === 1;
+
+                                    return (
+                                      <tr key={`${rate.id}-${idx}`} className="border-b border-slate-800/50 hover:bg-white/[0.02] transition-colors text-[13px]">
+                                        
+                                        <td className="px-4 py-3 font-semibold text-white align-middle whitespace-nowrap">
+                                          {clean(rate.liner_name)}
+                                        </td>
+                                        
+                                        <td className="px-4 py-3 align-middle">
+                                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${cargoTone(rate.cargo_type || "GENCO")} uppercase shadow-sm whitespace-nowrap`}>
+                                            {rate.cargo_type || "GENCO"}
+                                          </span>
+                                        </td>
+                                        
+                                        <td className="px-4 py-3 align-middle text-left whitespace-nowrap">
+                                          <span className="text-slate-200 inline-flex items-center text-[12px]">
+                                            <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-cyan-400" />
+                                            {formatValidityRange(rate.lcl_validity_from, rate.lcl_validity_to)}
+                                          </span>
+                                        </td>
+
+                                        <td className="px-4 py-3 align-middle text-left whitespace-nowrap">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-slate-200 font-semibold text-[12px]">
+                                              {opt.type_name}
+                                            </span>
+                                            {isPriority && (
+                                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400">
+                                                PRIORITY
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+
+                                        <td className="px-4 py-3 text-right font-mono align-middle">
+                                          <div className={clsx("font-bold text-[13px]", processedPrice === 0 || processedPrice === "FREE" ? "text-amber-300" : "text-cyan-300")}>
+                                            {money(processedPrice)}
+                                          </div>
+                                        </td>
+
+                                        <td className="px-4 py-3 align-middle text-left whitespace-nowrap pl-6">
+                                          {opt.transit_time && opt.transit_time !== "-" ? (
+                                            <span className="text-slate-400 font-normal text-[12px] inline-flex items-center">
+                                              <Clock className="mr-1.5 h-3.5 w-3.5 text-slate-500" />
+                                              {opt.transit_time}
+                                            </span>
+                                          ) : (
+                                            <span className="text-slate-600">-</span>
+                                          )}
+                                        </td>
+
+                                        <td className="px-4 py-3 text-right align-middle">
+                                          <button
+                                            onClick={() => openDetail(rate, group.route, "lcl")}
+                                            className="inline-flex h-8 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 text-xs font-bold text-amber-400 transition hover:bg-amber-500 hover:text-slate-950"
+                                          >
+                                            Detail
+                                          </button>
+                                        </td>
+                                        
+                                      </tr>
+                                    );
+                                  });
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+
+                          {/* AIR TABLE STRICT */}
                           {tab === "air" && (
                             <table className="w-full min-w-[1250px] border-collapse text-sm">
                               <thead className="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-400">
@@ -988,6 +1125,7 @@ export default function PricingPage() {
         loading={detailLoading}
         error={detailError}
         detail={detail}
+        rateType={modalRateType}
       />
 
       <QuoteRequestModal
