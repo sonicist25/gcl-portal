@@ -365,8 +365,39 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
     } catch (err) { console.error(err); } finally { setLoadingSearch(false); }
   };
 
-  const handlePrintBC = async () => { /* ... (fungsi lama) ... */ };
-  const handlePrintHBL = async () => { /* ... (fungsi lama) ... */ };
+    const handlePrintBC = async () => {
+    const url = `https://gclid.cloud/api/cetak_bc?booking_code=${form.booking_number}&warehouse=${form.warehouse}`;
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'x-api-key': 'gateway-fms' }
+      });
+      if (!response.ok) throw new Error("Invalid API key or request failed");
+      const blob = await response.blob();
+      const fileURL = window.URL.createObjectURL(blob);
+      window.open(fileURL, '_blank');
+    } catch (error) {
+      console.error("Error fetching PDF:", error);
+      alert("Gagal cetak BC: " + error.message);
+    }
+  };
+
+  const handlePrintHBL = async () => {
+    const url = `https://gclid.cloud/api/cetak_bl?spd=${form.booking_number}&code=1&cetak=TRUE`;
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'x-api-key': 'gateway-fms' }
+      });
+      if (!response.ok) throw new Error("Invalid API key or request failed");
+      const blob = await response.blob();
+      const fileURL = window.URL.createObjectURL(blob);
+      window.open(fileURL, '_blank');
+    } catch (error) {
+      console.error("Error fetching HBL PDF:", error);
+      alert("Gagal cetak HBL: " + error.message);
+    }
+  };
 
   if (!open) return null;
 
