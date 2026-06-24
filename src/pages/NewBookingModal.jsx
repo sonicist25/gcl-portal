@@ -373,7 +373,7 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
   return (
     <div style={styles.modalBackdrop}>
       <div style={styles.modalContainer}>
-        {/* HEADER */}
+       {/* HEADER */}
         <div style={{ ...styles.modalHeader, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", margin: 0, color: theme.textMain }}>
@@ -384,7 +384,22 @@ function NewBookingModal({ open, onClose, onSubmit, initialData }) {
               {initialData && !initialData.isFromSchedule ? `View/Edit booking ${form.booking_number}` : "Fill in the details below to create a new shipment."}
             </p>
           </div>
+
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            
+            {/* === KODE TOMBOL CETAK YANG KEMARIN TERHAPUS DIKEMBALIKAN DI SINI === */}
+            {initialData && !initialData.isFromSchedule && !loadingDetail && !isReadOnly &&(
+              <>
+                <button onClick={handlePrintBC} className="gcl-btn" style={{ backgroundColor: theme.success, color: "#fff", padding: "10px 16px", borderRadius: "8px", border: "none", cursor: 'pointer', display: "flex", alignItems: "center", gap: "6px" }}>
+                  <FaFilePdf /> Booking Confirmation
+                </button>
+                <button onClick={handlePrintHBL} className="gcl-btn" style={{ backgroundColor: theme.warning, color: "#fff", padding: "10px 16px", borderRadius: "8px", border: "none", cursor: 'pointer', display: "flex", alignItems: "center", gap: "6px" }}>
+                  <FaPrint /> Draft HBL
+                </button>
+              </>
+            )}
+            {/* ==================================================================== */}
+
             <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "1.5rem", color: theme.textMuted }}>
               <FaTimes />
             </button>
