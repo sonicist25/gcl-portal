@@ -1400,7 +1400,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
     const val = inputSi.trim();
     if (!val) return;
     setActiveSi(val);
-    setSearchParams({ si_number: val });
+    setSearchParams({ bl: val });
   };
 
   return (
