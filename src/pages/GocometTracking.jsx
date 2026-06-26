@@ -754,6 +754,69 @@ const formatCo2Emission = (value) => {
   })} kg CO₂`;
 };
 
+
+// =========================
+// JOURNEY EVENT HELPERS
+// =========================
+const normalizeEventText = (value) =>
+  String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+
+const compactEventText = (value) => normalizeEventText(value).replace(/\s+/g, "");
+
+const getFirstNonEmpty = (...values) => {
+  for (const value of values) {
+    const str = String(value ?? "").trim();
+    if (str) return str;
+  }
+  return "";
+};
+
+const isTransshipmentDepartureText = (text) => {
+  const normal = normalizeEventText(text);
+  const compact = compactEventText(text);
+
+  return (
+    compact.includes("transshipmentdeparture") ||
+    compact.includes("transhipmentdeparture") ||
+    normal.includes("departure from transhipment port") ||
+    normal.includes("departure from transshipment port")
+  );
+};
+
+const isOceanEventText = (eventName, locationType) => {
+  const text = normalizeEventText(`${eventName} ${locationType}`);
+
+  return (
+    text.includes("origin departure") ||
+    text.includes("shipment departed") ||
+    text.includes("departure from origin") ||
+    text.includes("arrival") ||
+    isTransshipmentDepartureText(text)
+  );
+};
+
+const getOceanCardTitle = (step) => {
+  if (step?.vessel) return step.vessel;
+
+  const type = normalizeEventText(step?.["location type"] || step?.location_type);
+  const eventName = normalizeEventText(step?.["event name"] || step?.event_name);
+  const text = `${eventName} ${type}`;
+
+  if (isTransshipmentDepartureText(text)) {
+    return "Transshipment Departure";
+  }
+
+  if (type.includes("arrival")) {
+    return "Ocean Arrival";
+  }
+
+  if (type.includes("departure")) {
+    return "Ocean Departure";
+  }
+
+  return "Ocean Shipment";
+};
+
 // =========================
 // JOURNEY GENERATOR
 // =========================
@@ -761,7 +824,9 @@ const generateUnifiedJourney = (data) => {
   const rawStepper = (data.stepper || []).filter(
     (step) => step && typeof step === "object"
   );
-  const routing = data.routing || [];
+  const routing = (data.routing || []).filter(
+    (route) => route && typeof route === "object"
+  );
   const eventList = (data["event list"] || data.event_list || []).filter(
     (e) => e && typeof e === "object"
   );
@@ -771,19 +836,15 @@ const generateUnifiedJourney = (data) => {
       const portName = evt["port name"] || evt.port_name;
       if (!portName) return null;
 
-      const evtType = (
-        evt["location name"] ||
-        evt.location_name ||
-        ""
-      ).toLowerCase();
+      const locationTypeRaw = evt["location name"] || evt.location_name || "";
+      const eventNameRaw = evt["event name"] || evt.event_name || "";
 
-      const eventName = (
-        evt["event name"] ||
-        evt.event_name ||
-        ""
-      ).toLowerCase();
-
+      const evtType = normalizeEventText(locationTypeRaw);
+      const eventName = normalizeEventText(eventNameRaw);
+      const eventText = `${eventName} ${evtType}`;
       const evtTime = parseDate(evt["event time"] || evt.event_time);
+
+      const isTransshipmentDeparture = isTransshipmentDepartureText(eventText);
 
       const isDoc =
         evtType.includes("document") ||
@@ -828,26 +889,65 @@ const generateUnifiedJourney = (data) => {
         eventName.includes("cargo received") ||
         eventName.includes("storage");
 
-      const stepObj = {
-        no: evt.no,
-        location: portName,
-        "location type": evt["location name"] || evt.location_name,
-        "event name": evt["event name"] || evt.event_name,
-        "event time": evt["event time"] || evt.event_time,
-        is_injected: false,
-        is_document: isDoc,
-        is_truck: isTruck,
-        is_warehouse: isWarehouse,
-        vessel: "",
-        container: "",
-      };
+      const eventContainer =
+  evt.container ||
+  evt.container_no ||
+  evt["container no"] ||
+  evt["Container No"] ||
+  "";
+
+const stepObj = {
+  no: evt.no,
+  location: portName,
+  "location type": evt["location name"] || evt.location_name,
+  "event name": evt["event name"] || evt.event_name,
+  "event time": evt["event time"] || evt.event_time,
+  is_injected: false,
+  is_document: isDoc,
+  is_truck: isTruck,
+  is_warehouse: isWarehouse,
+  is_ocean:
+    !isDoc &&
+    !isTruck &&
+    !isWarehouse &&
+    isOceanEventText(eventName, evtType),
+
+  vessel:
+    evt.vessel ||
+    evt.vessel_name ||
+    evt["vessel name"] ||
+    evt["Vessel Name"] ||
+    "",
+
+  // IMPORTANT:
+  // Container hanya dari event list.
+  // Jangan fallback dari stepper/routing, supaya arrival tidak menampilkan container yang salah.
+  container: eventContainer,
+  has_event_container: String(eventContainer || "").trim() !== "",
+};
 
       if (!isTruck && !isDoc && !isWarehouse) {
         const matchedStepper = rawStepper.find((s) => {
           if (!isSameLocation(s.location, portName)) return false;
 
-          const sType = (s["location type"] || "").toLowerCase();
-          if (sType.includes(evtType) || evtType.includes(sType)) return true;
+          const sType = normalizeEventText(s["location type"] || "");
+          const compactSType = compactEventText(sType);
+          const compactEvtType = compactEventText(evtType);
+
+          if (
+            compactSType.includes(compactEvtType) ||
+            compactEvtType.includes(compactSType)
+          ) {
+            return true;
+          }
+
+          const sEventName = normalizeEventText(s["event name"] || "");
+          if (
+            isTransshipmentDeparture &&
+            isTransshipmentDepartureText(`${sEventName} ${sType}`)
+          ) {
+            return true;
+          }
 
           const sTime = parseDate(s["event time"]);
           if (
@@ -862,8 +962,12 @@ const generateUnifiedJourney = (data) => {
         });
 
         if (matchedStepper) {
-          stepObj.vessel = matchedStepper.vessel;
-          stepObj.container = matchedStepper.container;
+          if (!stepObj.vessel) {
+            stepObj.vessel = matchedStepper.vessel || "";
+          }
+
+          // Jangan isi container dari stepper.
+          // Source container harus event list.
         }
 
         if (!stepObj.vessel) {
@@ -878,14 +982,27 @@ const generateUnifiedJourney = (data) => {
               r["port of discharge"] || r.port_of_discharge
             ).toUpperCase();
 
-            if (evtType.includes("departure")) return pol && loc && pol.includes(loc);
-            if (evtType.includes("arrival")) return pod && loc && pod.includes(loc);
+            const isDeparture = evtType.includes("departure") || isTransshipmentDeparture;
+            const isArrival = evtType.includes("arrival");
+
+            if (isDeparture) {
+              return pol && loc && (pol.includes(loc) || loc.includes(pol));
+            }
+
+            if (isArrival) {
+              return pod && loc && (pod.includes(loc) || loc.includes(pod));
+            }
+
             return false;
           });
 
           if (matchedRoute) {
-            stepObj.vessel = matchedRoute.vessel;
-            stepObj.container = matchedRoute.container;
+            if (!stepObj.vessel) {
+              stepObj.vessel = matchedRoute.vessel || "";
+            }
+
+            // Jangan isi container dari routing.
+            // Source container harus event list.
           }
         }
       }
@@ -1811,19 +1928,27 @@ function GocometTracking({ defaultSiNumber = "" }) {
                             </span>
                           </div>
 
-                          {step.vessel && (
-                            <div className="tl-vessel">
-                              <span className="v-icon">🚢</span>
-                              <div className="v-detail">
-                                <strong>{step.vessel}</strong>
-                                {step.container && (
-                                  <span className="container-chip">
-                                    📦 {step.container}
-                                  </span>
-                                )}
+                          {!step.is_document &&
+                            !step.is_truck &&
+                            !step.is_warehouse &&
+                            (step.vessel || step.is_ocean) && (
+                              <div className="tl-vessel">
+                                <span className="v-icon">🚢</span>
+                                <div className="v-detail">
+                                  <strong>{getOceanCardTitle(step)}</strong>
+
+                                  {step.has_event_container && step.container && (
+                                    <span className="container-chip">
+                                      📦 {step.container}
+                                    </span>
+                                  )}
+
+                                  {!step.vessel && step["event name"] && (
+                                    <span>{step["event name"]}</span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
                           {step.is_document && (
                             <div className="tl-vessel doc-type">

@@ -590,7 +590,13 @@ export default function PricingPage() {
       setLoading(true);
       setErr("");
 
-      const seaRes = await fetch("https://gateway-cl.com/api/crm/pricing?X-API-KEY=gateway-fms").then(r => r.json());
+      const seaRes = await fetch("https://gateway-cl.com/api/crm/pricing", {
+          method: "GET",
+          headers: {
+              "X-API-KEY": "gateway-fms",
+              "Content-Type": "application/json"
+          }
+      }).then(r => r.json());
       const pFcl = [];
       const pLcl = [];
 
@@ -634,7 +640,13 @@ export default function PricingPage() {
       setFclGroups(pFcl.sort((a, b) => a.route.localeCompare(b.route)));
       setLclGroups(pLcl.sort((a, b) => a.route.localeCompare(b.route)));
 
-      const airRes = await fetch("https://gateway-cl.com/api/feeder_rate?X-API-KEY=gateway-fms").then(r => r.json());
+      const airRes = await fetch("https://gateway-cl.com/api/feeder_rate", {
+          method: "GET",
+          headers: {
+              "X-API-KEY": "gateway-fms",
+              "Content-Type": "application/json"
+          }
+      }).then(r => r.json());
       const airMap = {};
       (airRes?.data?.air || []).forEach((r) => {
         const route = `${r.origin_code} (${r.origin}) ➝ ${r.destination_code} (${r.destination})`;
