@@ -1081,9 +1081,13 @@ function GocometTracking({ defaultSiNumber = "" }) {
           import.meta.env.VITE_API_BASE_URL || "https://gateway-cl.com";
 
         const res = await fetch(
-          `${API_BASE}/track_gocomet?X-API-KEY=gateway-fms&si_number=${encodeURIComponent(
-            activeSi
-          )}`
+          `${API_BASE}/track_gocomet?bl=${encodeURIComponent(activeSi)}`, // ganti si_number jadi bl
+          {
+            method: "GET",
+            headers: {
+              "X-API-KEY": "gateway-fms", // API key di header
+            },
+          }
         );
 
         const json = await res.json();
@@ -1095,6 +1099,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
         setLoading(false);
       }
     };
+
 
     loadData();
   }, [activeSi]);
