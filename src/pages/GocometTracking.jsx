@@ -13,6 +13,8 @@ import GclLayout from "../layouts/GclLayout";
 import "leaflet/dist/leaflet.css";
 import "../styles/gocometTracking.css";
 
+// REVISION V2 - event panel width + Bintang warehouse classification fixes
+
 // =========================
 // LEAFLET DEFAULT ICON FIX
 // =========================
@@ -624,6 +626,23 @@ const getFixedJourneyPriority = (step) => {
   const eventName = String(step?.["event name"] || step?.event_name || "").toLowerCase();
   const text = `${eventName} ${locType}`;
 
+  // Event import/warehouse dari Bintang harus ikut urutan timeline tanggal,
+  // jangan masuk rule fixed-priority proses awal shipment.
+  if (
+    text.includes("warehouse order") ||
+    text.includes("cargo received at warehouse") ||
+    text.includes("barang masuk gudang") ||
+    text.includes("customs / transfer") ||
+    text.includes("overbrengen") ||
+    text.includes("stripping permit") ||
+    text.includes("unloading cargo at cfs") ||
+    text.includes("payment completed") ||
+    text.includes("pembayaran lunas") ||
+    text.includes("final delivery")
+  ) {
+    return 1000;
+  }
+
   // Urutan paten untuk proses awal shipment.
   // Prioritas ini sengaja tidak mengikuti datetime, karena beberapa event lokal/gudang
   // punya tanggal input yang sama atau tidak konsisten dengan urutan operasional.
@@ -817,6 +836,113 @@ const getOceanCardTitle = (step) => {
   return "Ocean Shipment";
 };
 
+const getTimelineText = (step) =>
+  normalizeEventText(`${step?.["event name"] || step?.event_name || ""} ${step?.["location type"] || step?.location_type || ""}`);
+
+const getDocumentCardTitle = (step) => {
+  const text = getTimelineText(step);
+
+  if (
+    text.includes("payment completed") ||
+    text.includes("payment complete") ||
+    text.includes("pembayaran lunas")
+  ) {
+    return "Payment / Document";
+  }
+
+  return "Document Processing";
+};
+
+const getTruckCardTitle = (step) => {
+  const text = getTimelineText(step);
+
+  if (
+    text.includes("customs / transfer") ||
+    text.includes("customs transfer") ||
+    text.includes("overbrengen")
+  ) {
+    return "Customs / Transfer";
+  }
+
+  return "Logistics / Trucking";
+};
+
+
+const BINTANG_ASSET_BASE_URL = "https://api.bintanglogistikindonusa.id/";
+
+const buildAbsoluteTrackingAssetUrl = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+
+  const cleaned = raw.replace(/^\/+/, "");
+  return `${BINTANG_ASSET_BASE_URL}${cleaned}`;
+};
+
+const normalizeTrackingImages = (value) => {
+  if (!value) return [];
+
+  const rawImages = Array.isArray(value) ? value : [value];
+  const out = [];
+  const seen = new Set();
+
+  rawImages.forEach((item, index) => {
+    if (!item) return;
+
+    if (typeof item === "string") {
+      const url = buildAbsoluteTrackingAssetUrl(item);
+      if (!url || seen.has(url)) return;
+
+      seen.add(url);
+      out.push({
+        id: `img-${index}`,
+        url,
+        file_path: item,
+        created_at: "",
+        updated_at: "",
+      });
+      return;
+    }
+
+    if (typeof item !== "object") return;
+
+    const url = buildAbsoluteTrackingAssetUrl(
+      item.url ||
+        item.file_url ||
+        item.full_url ||
+        item.image_url ||
+        item.file_path ||
+        item.path ||
+        ""
+    );
+
+    if (!url || seen.has(url)) return;
+
+    seen.add(url);
+    out.push({
+      ...item,
+      id: item.id || `img-${index}`,
+      url,
+      file_path: item.file_path || item.path || "",
+      created_at: item.created_at || "",
+      updated_at: item.updated_at || "",
+    });
+  });
+
+  return out;
+};
+
+const getTrackingImageAlt = (step, image, index) => {
+  const eventName = step?.["event name"] || step?.event_name || "Tracking event";
+  const location = step?.location || "";
+  const no = image?.id ? `#${image.id}` : `#${index + 1}`;
+  return `${eventName} ${location} image ${no}`.trim();
+};
+
+
 // =========================
 // JOURNEY GENERATOR
 // =========================
@@ -855,7 +981,12 @@ const generateUnifiedJourney = (data) => {
         eventName.includes("document") ||
         eventName.includes("draft bl") ||
         eventName.includes("booking confirmed") ||
-        eventName.includes("invoice");
+        eventName.includes("invoice") ||
+        evtType.includes("payment completed") ||
+        evtType.includes("payment complete") ||
+        eventName.includes("pembayaran lunas") ||
+        eventName.includes("payment completed") ||
+        eventName.includes("payment complete");
 
       const isTruck =
         evtType.includes("deliver") ||
@@ -866,6 +997,10 @@ const generateUnifiedJourney = (data) => {
         eventName.includes("moving") ||
         eventName.includes("delivery") ||
         eventName.includes("gate in") ||
+        evtType.includes("customs / transfer") ||
+        evtType.includes("customs transfer") ||
+        evtType.includes("transfer") ||
+        eventName.includes("overbrengen") ||
         evtType.includes("empty") ||
         eventName.includes("gate out");
 
@@ -887,6 +1022,7 @@ const generateUnifiedJourney = (data) => {
         eventName.includes("deconsolidation") ||
         eventName.includes("receiving") ||
         eventName.includes("cargo received") ||
+        eventName.includes("barang masuk gudang") ||
         eventName.includes("storage");
 
       const eventContainer =
@@ -924,7 +1060,13 @@ const stepObj = {
   // Jangan fallback dari stepper/routing, supaya arrival tidak menampilkan container yang salah.
   container: eventContainer,
   has_event_container: String(eventContainer || "").trim() !== "",
+
+  warehouse: evt.warehouse || "",
+  badge_status: evt.badge_status || evt.badgeStatus || "",
+  notes: evt.notes || "",
+  images: normalizeTrackingImages(evt.images || evt.image || evt.photos || []),
 };
+      stepObj.has_images = stepObj.images.length > 0;
 
       if (!isTruck && !isDoc && !isWarehouse) {
         const matchedStepper = rawStepper.find((s) => {
@@ -1055,21 +1197,33 @@ function ChangeView({ center, zoom = 3, bounds = null }) {
 // =========================
 function GocometTracking({ defaultSiNumber = "" }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlSi = searchParams.get("si_number");
 
-  const [inputSi, setInputSi] = useState(urlSi || defaultSiNumber);
-  const [activeSi, setActiveSi] = useState(urlSi || "");
+// Support parameter baru `bl`, tapi tetap fallback dari si_number agar link lama tidak rusak.
+const urlBl = searchParams.get("bl");
+const legacySi = searchParams.get("si_number");
+const urlTrackingNo = urlBl || legacySi || "";
+
+const [inputSi, setInputSi] = useState(urlTrackingNo || defaultSiNumber);
+const [activeSi, setActiveSi] = useState(urlTrackingNo || "");
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [coords, setCoords] = useState({});
   const [journey, setJourney] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
-    if (urlSi && urlSi !== activeSi) {
-      setInputSi(urlSi);
-      setActiveSi(urlSi);
+    if (urlTrackingNo && urlTrackingNo !== activeSi) {
+      setInputSi(urlTrackingNo);
+      setActiveSi(urlTrackingNo);
     }
-  }, [urlSi, activeSi]);
+
+    // Kalau user buka link lama /tracking?si_number=xxx,
+    // otomatis rapikan URL jadi /tracking?bl=xxx tanpa reload.
+    if (!urlBl && legacySi) {
+      setSearchParams({ bl: legacySi }, { replace: true });
+    }
+  }, [urlTrackingNo, urlBl, legacySi, activeSi, setSearchParams]);
 
   useEffect(() => {
     if (!activeSi) return;
@@ -1413,8 +1567,8 @@ function GocometTracking({ defaultSiNumber = "" }) {
         <style>{`
           .tracking-content-row {
             display: grid;
-            /* PERBAIKAN 2: Batasi maksimal lebar panel kanan (timeline) agar tidak menabrak batas layar */
-            grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+            /* Panel event/timeline sedikit diperlebar agar gallery dan subtitle lebih lega */
+            grid-template-columns: minmax(0, 1fr) minmax(390px, 480px);
             gap: 18px;
             align-items: stretch;
             margin-top: 18px;
@@ -1521,6 +1675,157 @@ function GocometTracking({ defaultSiNumber = "" }) {
             font-size: 14px;
           }
 
+          .tl-image-gallery {
+            margin-top: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(15, 23, 42, 0.42);
+            border-radius: 14px;
+            padding: 10px;
+            overflow: hidden;
+          }
+
+          .tl-image-gallery-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .tl-image-count {
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+          }
+
+          .tl-image-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .tl-image-thumb {
+            position: relative;
+            height: 92px;
+            border: 0;
+            padding: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            background: rgba(30, 41, 59, 0.92);
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+          }
+
+          .tl-image-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 180ms ease, opacity 180ms ease;
+          }
+
+          .tl-image-thumb:hover img {
+            transform: scale(1.05);
+          }
+
+          .tl-image-more {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 6, 23, 0.68);
+            color: white;
+            font-weight: 900;
+            font-size: 18px;
+          }
+
+          .tl-image-meta {
+            margin-top: 8px;
+            color: #94a3b8;
+            font-size: 11px;
+            line-height: 1.35;
+          }
+
+          .tracking-image-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(2, 6, 23, 0.78);
+            backdrop-filter: blur(10px);
+          }
+
+          .tracking-image-modal-card {
+            position: relative;
+            width: min(960px, 96vw);
+            max-height: 92vh;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #0f172a;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
+          }
+
+          .tracking-image-modal-img {
+            width: 100%;
+            max-height: calc(92vh - 96px);
+            object-fit: contain;
+            display: block;
+            background: #020617;
+          }
+
+          .tracking-image-modal-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 16px;
+            color: #e2e8f0;
+            border-top: 1px solid rgba(148, 163, 184, 0.16);
+          }
+
+          .tracking-image-modal-title {
+            font-size: 14px;
+            font-weight: 800;
+          }
+
+          .tracking-image-modal-subtitle {
+            margin-top: 2px;
+            color: #94a3b8;
+            font-size: 12px;
+          }
+
+          .tracking-image-modal-link {
+            flex: 0 0 auto;
+            color: #38bdf8;
+            font-size: 13px;
+            font-weight: 800;
+            text-decoration: none;
+          }
+
+          .tracking-image-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 2;
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            color: white;
+            background: rgba(15, 23, 42, 0.72);
+            cursor: pointer;
+            font-size: 22px;
+            line-height: 1;
+          }
+
           @media (max-width: 1100px) {
             .tracking-content-row {
               grid-template-columns: 1fr;
@@ -1532,6 +1837,55 @@ function GocometTracking({ defaultSiNumber = "" }) {
             }
           }
         `}</style>
+
+        {previewImage && (
+          <div
+            className="tracking-image-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div
+              className="tracking-image-modal-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="tracking-image-modal-close"
+                aria-label="Close image preview"
+                onClick={() => setPreviewImage(null)}
+              >
+                ×
+              </button>
+
+              <img
+                src={previewImage.url}
+                alt={previewImage.alt || "Tracking event image"}
+                className="tracking-image-modal-img"
+              />
+
+              <div className="tracking-image-modal-info">
+                <div>
+                  <div className="tracking-image-modal-title">
+                    {previewImage.eventName || "Tracking Image"}
+                  </div>
+                  <div className="tracking-image-modal-subtitle">
+                    {previewImage.location || "-"} • {previewImage.eventTime || "-"}
+                  </div>
+                </div>
+
+                <a
+                  className="tracking-image-modal-link"
+                  href={previewImage.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open original
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="gocomet-top-bar">
           <div className="gocomet-title-wrap">
@@ -1959,7 +2313,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
                             <div className="tl-vessel doc-type">
                               <span className="v-icon">📄</span>
                               <div className="v-detail">
-                                <strong>Document Processing</strong>
+                                <strong>{getDocumentCardTitle(step)}</strong>
                                 <span>{step["event name"]}</span>
                               </div>
                             </div>
@@ -1969,7 +2323,7 @@ function GocometTracking({ defaultSiNumber = "" }) {
                             <div className="tl-vessel truck-type">
                               <span className="v-icon">🚚</span>
                               <div className="v-detail">
-                                <strong>Logistics / Trucking</strong>
+                                <strong>{getTruckCardTitle(step)}</strong>
                                 <span>{step["event name"]}</span>
                               </div>
                             </div>
@@ -1981,7 +2335,57 @@ function GocometTracking({ defaultSiNumber = "" }) {
                               <div className="v-detail">
                                 <strong>Warehouse Activity</strong>
                                 <span>{step["event name"]}</span>
+                                {step.warehouse && <span>Warehouse: {step.warehouse}</span>}
+                                {step.badge_status && (
+                                  <span className="container-chip">✓ {step.badge_status}</span>
+                                )}
                               </div>
+                            </div>
+                          )}
+
+                          {step.has_images && (
+                            <div className="tl-image-gallery">
+                              <div className="tl-image-gallery-head">
+                                <span>📷 Event Photos</span>
+                                <span className="tl-image-count">
+                                  {step.images.length} file{step.images.length > 1 ? "s" : ""}
+                                </span>
+                              </div>
+
+                              <div className="tl-image-grid">
+                                {step.images.slice(0, 4).map((img, imageIdx) => {
+                                  const hiddenCount = step.images.length - 4;
+                                  const showMore = imageIdx === 3 && hiddenCount > 0;
+                                  const alt = getTrackingImageAlt(step, img, imageIdx);
+
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={`${img.id || img.url}-${imageIdx}`}
+                                      className="tl-image-thumb"
+                                      title="Preview image"
+                                      onClick={() =>
+                                        setPreviewImage({
+                                          ...img,
+                                          alt,
+                                          eventName: step["event name"] || step.event_name || "",
+                                          location: cleanPortName(step.location),
+                                          eventTime: step["event time"] || step.event_time || "",
+                                        })
+                                      }
+                                    >
+                                      <img src={img.url} alt={alt} loading="lazy" />
+                                      {showMore && (
+                                        <span className="tl-image-more">+{hiddenCount}</span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {step.notes && (
+                                <div className="tl-image-meta">{step.notes}</div>
+                              )}
                             </div>
                           )}
 
